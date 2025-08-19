@@ -30,6 +30,22 @@ export const Header = () => {
           >
             Blog
           </Link>
+          <Link 
+            to="/about" 
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              location.pathname === "/about" ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            About
+          </Link>
+          <Link 
+            to="/connect" 
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              location.pathname === "/connect" ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            Connect
+          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">
