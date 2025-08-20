@@ -84,7 +84,7 @@ export const Footer = () => {
             <h3 className="font-semibold mb-4">Connect with Me</h3>
             <div className="space-y-3">
               <a 
-                href="https://linkedin.com/in/dikshant" 
+                href="https://linkedin.com/in/dikshant-rai" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -94,7 +94,7 @@ export const Footer = () => {
                 <ExternalLink className="h-3 w-3" />
               </a>
               <a 
-                href="https://twitter.com/dikshant" 
+                href="https://twitter.com/dikshant_rai1" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -104,7 +104,7 @@ export const Footer = () => {
                 <ExternalLink className="h-3 w-3" />
               </a>
               <a 
-                href="https://github.com/dikshant" 
+                href="https://github.com/dikshant-devops" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -114,7 +114,7 @@ export const Footer = () => {
                 <ExternalLink className="h-3 w-3" />
               </a>
               <a 
-                href="mailto:dikshant@techwithdikshant.com" 
+                href="mailto:dikshantdevops@gmail.com" 
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <Mail className="h-4 w-4" />
