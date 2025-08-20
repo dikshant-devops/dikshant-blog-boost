@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: [
+      "techwithdikshant.com", // exact host
+      ".techwithdikshant.com" // any subdomain (e.g., dev.techwithdikshant.com)
+    ],
   },
   plugins: [
     react(),
