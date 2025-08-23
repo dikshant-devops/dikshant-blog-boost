@@ -1,17 +1,46 @@
 import { useParams, Navigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
-import { blogPosts } from "@/data/blogPosts";
+import { getBlogPosts, type BlogPost } from "@/data/blogPosts";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const BlogPost = () => {
   const { id } = useParams();
-  const post = blogPosts.find(p => p.id === id);
-
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [allPosts, setAllPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    getBlogPosts()
+      .then(posts => {
+        setAllPosts(posts);
+        const foundPost = posts.find((p) => p.id === id);
+        if (!foundPost) {
+          return;
+        }
+        setPost(foundPost);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [id]);
+  
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-12 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-lg text-muted-foreground">Loading blog post...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
   if (!post) {
     return <Navigate to="/blog" replace />;
   }
@@ -126,7 +155,7 @@ const BlogPost = () => {
         <div className="mt-12 pt-8 border-t">
           <h3 className="text-2xl font-semibold mb-6">More Articles</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {blogPosts
+            {allPosts
               .filter(p => p.id !== post.id)
               .slice(0, 2)
               .map((relatedPost) => (

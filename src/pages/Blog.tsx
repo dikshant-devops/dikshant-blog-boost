@@ -1,7 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { BlogCard } from "@/components/BlogCard";
-import { BlogPost, blogPosts } from "@/data/blogPosts";
-import { useState } from "react";
+import { BlogPost, getBlogPosts } from "@/data/blogPosts";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
@@ -9,12 +9,22 @@ import { Search } from "lucide-react";
 const Blog = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load blog posts on component mount
+  useEffect(() => {
+    getBlogPosts()
+      .then(setPosts)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   // Get all unique tags
-  const allTags = Array.from(new Set(blogPosts.flatMap(post => post.tags)));
+  const allTags = Array.from(new Set(posts.flatMap(post => post.tags)));
 
   // Filter posts based on search and tag
-  const filteredPosts = blogPosts.filter(post => {
+  const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTag = !selectedTag || post.tags.includes(selectedTag);
@@ -69,18 +79,22 @@ const Blog = () => {
 
         {/* Blog Posts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPosts.map((post) => (
-            <BlogCard key={post.id} post={post} />
-          ))}
+          {loading ? (
+            <div className="text-center py-12 col-span-full">
+              <p className="text-lg text-muted-foreground">Loading blog posts...</p>
+            </div>
+          ) : filteredPosts.length > 0 ? (
+            filteredPosts.map((post) => (
+              <BlogCard key={post.id} post={post} />
+            ))
+          ) : (
+            <div className="text-center py-12 col-span-full">
+              <p className="text-lg text-muted-foreground">
+                No articles found matching your criteria.
+              </p>
+            </div>
+          )}
         </div>
-
-        {filteredPosts.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-lg text-muted-foreground">
-              No articles found matching your criteria.
-            </p>
-          </div>
-        )}
       </div>
     </Layout>
   );
