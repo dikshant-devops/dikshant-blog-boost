@@ -19,33 +19,37 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
     if (!email) return;
 
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For now, just store in localStorage (you can replace with actual API)
-    const subscribers = JSON.parse(localStorage.getItem("newsletter_subscribers") || "[]");
-    const existingSubscriber = subscribers.find((sub: any) => sub.email === email);
-    
-    if (existingSubscriber) {
-      toast({
-        title: "Already subscribed!",
-        description: "You're already subscribed to our newsletter.",
+
+    try {
+      const response = await fetch("https://app.beehiiv.com/subscribers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bvl8Di3vswjanZgCEDzHfaWej4Np8BqOuLWS6GqUNgXJ0vGVXAlAgXyqFFeWdZiCG", // <-- Replace with your Beehiiv API key
+        },
+        body: JSON.stringify({ email }),
       });
-    } else {
-      subscribers.push({
-        email,
-        subscribedAt: new Date().toISOString(),
-      });
-      localStorage.setItem("newsletter_subscribers", JSON.stringify(subscribers));
-      
+
+      if (response.ok) {
+        toast({
+          title: "Successfully subscribed!",
+          description: "Thank you for subscribing to our newsletter.",
+        });
+        setEmail("");
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Subscription failed!",
+          description: data?.error || "Something went wrong. Please try again.",
+        });
+      }
+    } catch {
       toast({
-        title: "Successfully subscribed!",
-        description: "Thank you for subscribing to our newsletter.",
+        title: "Network error!",
+        description: "Unable to subscribe. Please try again later.",
       });
     }
-    
-    setEmail("");
+
     setIsLoading(false);
   };
 
@@ -64,6 +68,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
             onChange={(e) => setEmail(e.target.value)}
             required
             className="flex-1"
+            disabled={isLoading}
           />
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Subscribing..." : "Subscribe"}
@@ -89,10 +94,11 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={isLoading}
           />
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-primary hover:opacity-90" 
+          <Button
+            type="submit"
+            className="w-full bg-gradient-primary hover:opacity-90"
             disabled={isLoading}
           >
             {isLoading ? "Subscribing..." : "Subscribe to Newsletter"}
