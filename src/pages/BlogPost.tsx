@@ -8,6 +8,7 @@ import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import { getBlogPosts, getBlogPost, type BlogPost } from "@/data/blogPosts";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { loadMarkdownPost } from "@/utils/markdownLoader";
 
 const BlogPost = () => {
   const { id } = useParams();
@@ -16,17 +17,29 @@ const BlogPost = () => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    getBlogPosts()
-      .then(posts => {
-        setAllPosts(posts);
-        const foundPost = posts.find((p) => p.id === id);
-        if (!foundPost) {
-          return;
+    const fetchPost = async () => {
+      try {
+        // First try to get from static data
+        const foundPost = await getBlogPost(id || '');
+        if (foundPost) {
+          setPost(foundPost);
+        } else {
+          // Try loading from markdown file
+          const markdownPost = await loadMarkdownPost(id || '');
+          setPost(markdownPost);
         }
-        setPost(foundPost);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+        
+        // Load all posts for related posts section
+        const allPosts = await getBlogPosts();
+        setAllPosts(allPosts);
+      } catch (error) {
+        console.error('Error loading post:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPost();
   }, [id]);
   
   if (loading) {

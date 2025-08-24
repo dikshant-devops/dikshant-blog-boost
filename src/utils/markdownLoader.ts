@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BlogPost } from "@/data/blogPosts";
 
 // Function to load and parse markdown files
@@ -10,7 +11,8 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
     const markdownFiles = [
       'getting-started-with-docker.md',
       'kubernetes-introduction.md', 
-      'github-actions-cicd.md'
+      'github-actions-cicd.md',
+      'sample-post.md'
     ];
     
     for (const filename of markdownFiles) {
@@ -22,6 +24,8 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
           if (post) {
             posts.push(post);
           }
+        } else {
+          console.warn(`Could not load ${filename}: ${response.status}`);
         }
       } catch (error) {
         console.warn(`Failed to load ${filename}:`, error);
@@ -96,6 +100,20 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
   }
 }
 
+// Function to load a single markdown post by ID
+export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
+  try {
+    const response = await fetch(`/blog-posts/${id}.md`);
+    if (response.ok) {
+      const content = await response.text();
+      return parseMarkdownFile(content, `${id}.md`);
+    }
+  } catch (error) {
+    console.warn(`Failed to load post ${id}:`, error);
+  }
+  return null;
+}
+
 // Hook to use markdown posts with React
 export function useMarkdownPosts() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -114,5 +132,3 @@ export function useMarkdownPosts() {
   
   return { posts, loading, error };
 }
-
-import { useState, useEffect } from 'react';

@@ -1,6 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { BlogCard } from "@/components/BlogCard";
 import { BlogPost, getBlogPosts } from "@/data/blogPosts";
+import { loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,10 +15,29 @@ const Blog = () => {
 
   // Load blog posts on component mount
   useEffect(() => {
-    getBlogPosts()
-      .then(setPosts)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    const loadAllPosts = async () => {
+      try {
+        // Load both static posts and markdown posts
+        const [staticPosts, markdownPosts] = await Promise.all([
+          getBlogPosts(),
+          loadMarkdownPosts()
+        ]);
+        
+        // Combine and sort by date
+        const allPosts = [...staticPosts, ...markdownPosts];
+        const sortedPosts = allPosts.sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        
+        setPosts(sortedPosts);
+      } catch (error) {
+        console.error('Error loading posts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllPosts();
   }, []);
 
   // Get all unique tags
