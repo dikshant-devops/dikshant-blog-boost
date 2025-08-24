@@ -54,28 +54,28 @@ const Connect = () => {
     {
       name: "LinkedIn",
       icon: Linkedin,
-      url: "https://linkedin.com/in/dikshant",
+      url: "https://linkedin.com/in/dikshant-rai",
       description: "Connect with me professionally and see my career journey",
       color: "text-blue-600"
     },
     {
       name: "Twitter",
       icon: Twitter,
-      url: "https://twitter.com/dikshant",
+      url: "https://twitter.com/dikshant_rai1",
       description: "Follow for quick DevOps tips and industry insights",
       color: "text-blue-400"
     },
     {
       name: "GitHub",
       icon: Github,
-      url: "https://github.com/dikshant",
+      url: "https://github.com/dikshant-devops",
       description: "Explore my open-source projects and contributions",
       color: "text-gray-700 dark:text-gray-300"
     },
     {
       name: "Email",
       icon: Mail,
-      url: "mailto:dikshant@techwithdikshant.com",
+      url: "mailto:dikshantdevops@gmail.com",
       description: "Send me a direct email for detailed discussions",
       color: "text-red-600"
     }
