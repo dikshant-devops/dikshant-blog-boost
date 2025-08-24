@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { subscribeToNewsletter } from "@/services/beehiiv";
 
 interface NewsletterSignupProps {
   className?: string;
@@ -20,33 +21,31 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
 
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For now, just store in localStorage (you can replace with actual API)
-    const subscribers = JSON.parse(localStorage.getItem("newsletter_subscribers") || "[]");
-    const existingSubscriber = subscribers.find((sub: any) => sub.email === email);
-    
-    if (existingSubscriber) {
-      toast({
-        title: "Already subscribed!",
-        description: "You're already subscribed to our newsletter.",
-      });
-    } else {
-      subscribers.push({
-        email,
-        subscribedAt: new Date().toISOString(),
-      });
-      localStorage.setItem("newsletter_subscribers", JSON.stringify(subscribers));
+    try {
+      const result = await subscribeToNewsletter(email);
       
+      if (result.success) {
+        toast({
+          title: "Successfully subscribed!",
+          description: result.message,
+        });
+        setEmail("");
+      } else {
+        toast({
+          title: "Subscription failed",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Successfully subscribed!",
-        description: "Thank you for subscribing to our newsletter.",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setEmail("");
-    setIsLoading(false);
   };
 
   if (variant === "inline") {
