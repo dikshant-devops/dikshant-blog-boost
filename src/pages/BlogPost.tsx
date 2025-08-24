@@ -5,7 +5,7 @@ import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
-import { getBlogPosts, type BlogPost } from "@/data/blogPosts";
+import { getBlogPosts, getBlogPost, type BlogPost } from "@/data/blogPosts";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 

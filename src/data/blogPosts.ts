@@ -305,3 +305,14 @@ GitHub Actions provides a powerful platform for implementing CI/CD pipelines. By
 Start with simple workflows and gradually add complexity as your needs grow. Remember to follow best practices for security, performance, and maintainability.`
   }
 ];
+
+// Function to get all blog posts (simulating async behavior for future API integration)
+export const getBlogPosts = async (): Promise<BlogPost[]> => {
+  // In the future, this could fetch from an API or load markdown files
+  return Promise.resolve(blogPosts);
+};
+
+// Function to get a single blog post by ID
+export const getBlogPost = async (id: string): Promise<BlogPost | undefined> => {
+  return Promise.resolve(blogPosts.find(post => post.id === id));
+};
