@@ -10,8 +10,5 @@ destination = "dist"
 [build.environment_variables]
 NODE_VERSION = "18"
 
-[[build.environment_variables]]
-SKIP_DEPENDENCY_INSTALL = "true"
-
 [env.production]
 # Add any production environment variables here if needed
