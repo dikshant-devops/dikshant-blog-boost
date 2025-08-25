@@ -1,6 +1,6 @@
 import { useParams, Navigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Layout } from "@/components/Layout";
+
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,13 +44,11 @@ const BlogPost = () => {
   
   if (loading) {
     return (
-      <Layout>
-        <div className="container mx-auto py-12 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <p className="text-lg text-muted-foreground">Loading blog post...</p>
-          </div>
+      <div className="container mx-auto py-12 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-lg text-muted-foreground">Loading blog post...</p>
         </div>
-      </Layout>
+      </div>
     );
   }
   
@@ -65,7 +63,7 @@ const BlogPost = () => {
   });
 
   return (
-    <Layout>
+    <>
       <article className="container mx-auto py-8 px-4 max-w-4xl">
         {/* Back to Blog */}
         <Button variant="ghost" asChild className="mb-6">
@@ -188,7 +186,7 @@ const BlogPost = () => {
           </div>
         </div>
       </article>
-    </Layout>
+    </>
   );
 };
 

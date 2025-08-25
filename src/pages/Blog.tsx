@@ -1,4 +1,4 @@
-import { Layout } from "@/components/Layout";
+
 import { BlogCard } from "@/components/BlogCard";
 import { BlogPost, getBlogPosts } from "@/data/blogPosts";
 import { loadMarkdownPosts } from "@/utils/markdownLoader";
@@ -52,7 +52,7 @@ const Blog = () => {
   });
 
   return (
-    <Layout>
+    <>
       <div className="container mx-auto py-12 px-4">
         {/* Header */}
         <div className="text-center mb-12">
@@ -116,7 +116,7 @@ const Blog = () => {
           )}
         </div>
       </div>
-    </Layout>
+    </>
   );
 };
 

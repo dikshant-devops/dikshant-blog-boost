@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,7 +81,7 @@ const Connect = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <div className="container mx-auto py-12 px-4 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-12">
@@ -270,7 +269,7 @@ const Connect = () => {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 };
 

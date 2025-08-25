@@ -1,11 +1,10 @@
-import { Layout } from "@/components/Layout";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Mail, Users, Calendar } from "lucide-react";
 
 const Newsletter = () => {
   return (
-    <Layout>
+    <>
       <div className="container mx-auto py-12 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -116,7 +115,7 @@ const Newsletter = () => {
           </Card>
         </div>
       </div>
-    </Layout>
+    </>
   );
 };
 

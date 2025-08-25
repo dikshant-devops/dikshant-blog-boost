@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,7 @@ const About = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <div className="container mx-auto py-12 px-4 max-w-4xl">
         {/* Hero Section */}
         <div className="text-center mb-12">
@@ -181,7 +180,7 @@ const About = () => {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </>
   );
 };
 

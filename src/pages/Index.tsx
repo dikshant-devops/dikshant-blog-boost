@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Layout } from "@/components/Layout";
 import { BlogCard } from "@/components/BlogCard";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ const Index = () => {
   const featuredPosts = blogPosts.slice(0, 3);
 
   return (
-    <Layout>
+    <>
       {/* Hero Section */}
       <section className="relative bg-gradient-hero text-white py-20 px-4">
         <div className="container mx-auto text-center">
@@ -121,7 +120,7 @@ const Index = () => {
           <NewsletterSignup />
         </div>
       </section>
-    </Layout>
+    </>
   );
 };
 
