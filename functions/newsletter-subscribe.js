@@ -1,9 +1,4 @@
-interface Env {
-  BEEHIIV_API_KEY: string;
-  BEEHIIV_PUBLICATION_ID: string;
-}
-
-export const onRequestPost = async (context: { request: Request; env: Env }) => {
+export async function onRequestPost(context) {
   const { request, env } = context;
 
   // Handle CORS
@@ -101,4 +96,4 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       }
     );
   }
-};
+}
