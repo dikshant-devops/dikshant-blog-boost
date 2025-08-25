@@ -5,12 +5,13 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/' : '/',
   server: {
     host: "::",
     port: 8080,
     allowedHosts: [
-      "techwithdikshant.com", // exact host
-      ".techwithdikshant.com" // any subdomain (e.g., dev.techwithdikshant.com)
+      "techwithdikshant.com",
+      ".techwithdikshant.com"
     ],
   },
   plugins: [
@@ -24,6 +25,10 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {

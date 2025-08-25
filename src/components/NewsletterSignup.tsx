@@ -18,17 +18,17 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
     e.preventDefault();
     if (!email) return;
 
-    // Create form data for Beehiiv
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    // Submit to Beehiiv (this will redirect or show success page)
-    form.submit();
-    
+    // Show success message immediately since form will redirect
     toast({
-      title: "Redirecting to subscription...",
-      description: "You'll be redirected to complete your subscription.",
+      title: "Opening subscription form...",
+      description: "You'll be redirected to complete your subscription on Beehiiv.",
     });
+
+    // Small delay to show toast, then submit
+    setTimeout(() => {
+      const form = e.target as HTMLFormElement;
+      form.submit();
+    }, 500);
   };
 
   if (variant === "inline") {
