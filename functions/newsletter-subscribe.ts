@@ -1,9 +1,9 @@
-export interface Env {
-  VITE_BEEHIIV_API_KEY: string;
-  VITE_BEEHIIV_PUBLICATION_ID: string;
+interface Env {
+  BEEHIIV_API_KEY: string;
+  BEEHIIV_PUBLICATION_ID: string;
 }
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
+export const onRequestPost = async (context: { request: Request; env: Env }) => {
   const { request, env } = context;
 
   // Handle CORS
@@ -19,9 +19,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   try {
+    console.log('Function called, parsing request...');
     const { email } = await request.json();
+    console.log('Email received:', email);
 
     if (!email) {
+      console.log('No email provided');
       return new Response(JSON.stringify({ error: 'Email is required' }), {
         status: 400,
         headers: {
@@ -31,13 +34,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
     }
 
+    console.log('Environment variables check:');
+    console.log('API Key exists:', !!env.BEEHIIV_API_KEY);
+    console.log('Publication ID:', env.BEEHIIV_PUBLICATION_ID);
+
     const response = await fetch(
-      `https://api.beehiiv.com/v2/publications/${env.VITE_BEEHIIV_PUBLICATION_ID}/subscriptions`,
+      `https://api.beehiiv.com/v2/publications/${env.BEEHIIV_PUBLICATION_ID}/subscriptions`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.VITE_BEEHIIV_API_KEY}`,
+          'Authorization': `Bearer ${env.BEEHIIV_API_KEY}`,
         },
         body: JSON.stringify({
           email: email,
@@ -47,7 +54,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     );
 
+    console.log('Beehiiv API response status:', response.status);
     const responseData = await response.json();
+    console.log('Beehiiv API response data:', responseData);
 
     if (response.ok) {
       return new Response(
@@ -78,6 +87,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
   } catch (error) {
+    console.error('Function error:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error' 

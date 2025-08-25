@@ -25,6 +25,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
     setIsLoading(true);
     
     try {
+      console.log('Attempting to subscribe email:', email);
       const response = await fetch('/newsletter-subscribe', {
         method: 'POST',
         headers: {
@@ -35,7 +36,9 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
         }),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok && data.success) {
         setSubscriptionStep('success');
