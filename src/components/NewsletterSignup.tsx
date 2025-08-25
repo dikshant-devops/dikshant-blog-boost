@@ -26,7 +26,9 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
     
     try {
       console.log('Attempting to subscribe email:', email);
-      const response = await fetch('/newsletter-subscribe', {
+      
+      // Try the function endpoint first
+      let response = await fetch('/api/newsletter-subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,7 +38,30 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
         }),
       });
 
+      // If that fails, try the direct path
+      if (!response.ok) {
+        console.log('Trying alternative path...');
+        response = await fetch('/newsletter-subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email,
+          }),
+        });
+      }
+
       console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        console.error('Response not ok:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
       const data = await response.json();
       console.log('Response data:', data);
 
