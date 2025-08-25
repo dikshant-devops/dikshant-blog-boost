@@ -25,20 +25,19 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
     setIsLoading(true);
     
     try {
-      const response = await fetch('https://api.beehiiv.com/v2/publications/' + import.meta.env.VITE_BEEHIIV_PUBLICATION_ID + '/subscriptions', {
+      const response = await fetch('/newsletter-subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + import.meta.env.VITE_BEEHIIV_API_KEY,
         },
         body: JSON.stringify({
           email: email,
-          reactivate_existing: false,
-          send_welcome_email: true,
         }),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         setSubscriptionStep('success');
         setShowModal(true);
         toast({
@@ -47,10 +46,9 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
         });
         setEmail("");
       } else {
-        const errorData = await response.json();
         toast({
           title: "Subscription failed",
-          description: errorData.message || "Please try again later.",
+          description: data.error || "Please try again later.",
           variant: "destructive",
         });
       }
