@@ -19,12 +19,12 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
           <Layout>
             <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="text-lg">Loading...</div></div>}>
               <Routes>
@@ -39,10 +39,10 @@ const App = () => (
               </Routes>
             </Suspense>
           </Layout>
-        </BrowserRouter>
-    </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </BrowserRouter>
 );
 
 export default App;
