@@ -15,35 +15,59 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [subscriptionStep, setSubscriptionStep] = useState<'form' | 'iframe' | 'success'>('form');
+  const [subscriptionStep, setSubscriptionStep] = useState<'form' | 'success'>('form');
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
 
     setIsLoading(true);
-    setShowModal(true);
-    setSubscriptionStep('iframe');
     
-    // Simulate success after iframe interaction
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-  };
+    try {
+      const response = await fetch('https://api.beehiiv.com/v2/publications/' + import.meta.env.VITE_BEEHIIV_PUBLICATION_ID + '/subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + import.meta.env.VITE_BEEHIIV_API_KEY,
+        },
+        body: JSON.stringify({
+          email: email,
+          reactivate_existing: false,
+          send_welcome_email: true,
+        }),
+      });
 
-  const handleSubscriptionSuccess = () => {
-    setSubscriptionStep('success');
-    toast({
-      title: "Welcome to our newsletter! 🎉",
-      description: "Check your email to confirm your subscription.",
-    });
+      if (response.ok) {
+        setSubscriptionStep('success');
+        setShowModal(true);
+        toast({
+          title: "Welcome to our newsletter! 🎉",
+          description: "Check your email to confirm your subscription.",
+        });
+        setEmail("");
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Subscription failed",
+          description: errorData.message || "Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Network error",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSubscriptionStep('form');
-    setEmail("");
     setIsLoading(false);
   };
 
@@ -72,33 +96,6 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
 
         <Dialog open={showModal} onOpenChange={setShowModal}>
           <DialogContent className="sm:max-w-[500px]">
-            {subscriptionStep === 'iframe' && (
-              <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Mail className="w-5 h-5" />
-                    Complete Your Subscription
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <iframe
-                    src={`https://embeds.beehiiv.com/57a1af85-50f4-44eb-bde7-c88cccd2fcd3?email=${encodeURIComponent(email)}`}
-                    width="100%"
-                    height="400"
-                    frameBorder="0"
-                    scrolling="no"
-                    onLoad={handleSubscriptionSuccess}
-                    className="rounded-lg"
-                  />
-                  <div className="text-center">
-                    <Button onClick={closeModal} variant="outline">
-                      Close & Return to Site
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-            
             {subscriptionStep === 'success' && (
               <>
                 <DialogHeader>
@@ -157,33 +154,6 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-[500px]">
-          {subscriptionStep === 'iframe' && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Complete Your Subscription
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <iframe
-                  src={`https://embeds.beehiiv.com/57a1af85-50f4-44eb-bde7-c88cccd2fcd3?email=${encodeURIComponent(email)}`}
-                  width="100%"
-                  height="400"
-                  frameBorder="0"
-                  scrolling="no"
-                  onLoad={handleSubscriptionSuccess}
-                  className="rounded-lg"
-                />
-                <div className="text-center">
-                  <Button onClick={closeModal} variant="outline">
-                    Close & Return to Site
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-          
           {subscriptionStep === 'success' && (
             <>
               <DialogHeader>
