@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { subscribeToNewsletter } from "@/services/beehiiv";
 
 interface NewsletterSignupProps {
   className?: string;
@@ -15,37 +14,21 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
 
-    setIsLoading(true);
+    // Create form data for Beehiiv
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
     
-    try {
-      const result = await subscribeToNewsletter(email);
-      
-      if (result.success) {
-        toast({
-          title: "Successfully subscribed!",
-          description: result.message,
-        });
-        setEmail("");
-      } else {
-        toast({
-          title: "Subscription failed",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Submit to Beehiiv (this will redirect or show success page)
+    form.submit();
+    
+    toast({
+      title: "Redirecting to subscription...",
+      description: "You'll be redirected to complete your subscription.",
+    });
   };
 
   if (variant === "inline") {
@@ -55,15 +38,24 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
         <p className="text-muted-foreground mb-4">
           Get the latest DevOps tips and tutorials delivered to your inbox.
         </p>
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        <form 
+          action="https://embeds.beehiiv.com/57a1af85-50f4-44eb-bde7-c88cccd2fcd3" 
+          method="post" 
+          target="_blank"
+          onSubmit={handleSubmit} 
+          className="flex gap-2"
+        >
           <Input
             type="email"
+            name="email"
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             className="flex-1"
           />
+          <input type="hidden" name="utm_source" value="website" />
+          <input type="hidden" name="utm_medium" value="newsletter_signup" />
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Subscribing..." : "Subscribe"}
           </Button>
@@ -81,14 +73,23 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form 
+          action="https://embeds.beehiiv.com/57a1af85-50f4-44eb-bde7-c88cccd2fcd3" 
+          method="post" 
+          target="_blank"
+          onSubmit={handleSubmit} 
+          className="space-y-4"
+        >
           <Input
             type="email"
+            name="email"
             placeholder="Enter your email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
+          <input type="hidden" name="utm_source" value="website" />
+          <input type="hidden" name="utm_medium" value="newsletter_signup" />
           <Button 
             type="submit" 
             className="w-full bg-gradient-primary hover:opacity-90" 
