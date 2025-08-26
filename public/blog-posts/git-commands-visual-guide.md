@@ -54,6 +54,10 @@ Initialized empty Git repository in /path/to/your/project/.git/
 git status
 ```
 
+The `git status` command is your best friend when working with Git. It shows you exactly what's happening in your repository at any moment.
+
+![Git Status Screenshot](/src/assets/git-status-screenshot.png)
+
 **Sample Output:**
 ```
 On branch main
@@ -135,6 +139,8 @@ git commit -m "updated stuff"
 git log
 ```
 
+![Git Log Graph Screenshot](/src/assets/git-log-graph-screenshot.png)
+
 **Sample Output:**
 ```
 commit 2f3a1b8d9e7c6f5a4b3c2d1e0f9g8h7i (HEAD -> main)
@@ -193,6 +199,8 @@ feature/profile    *---*
 ```bash
 git branch
 ```
+
+![Git Branch Screenshot](/src/assets/git-branch-screenshot.png)
 
 **Output:**
 ```
@@ -363,6 +371,8 @@ git diff --staged
 # Compare branches
 git diff main feature/new-feature
 ```
+
+![Git Diff Screenshot](/src/assets/git-diff-screenshot.png)
 
 **Sample Diff Output:**
 ```diff
