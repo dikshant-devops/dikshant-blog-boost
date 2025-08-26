@@ -1,6 +1,6 @@
 
 import { BlogCard } from "@/components/BlogCard";
-import { BlogPost, getBlogPosts } from "@/data/blogPosts";
+import { BlogPost } from "@/data/blogPosts";
 import { loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -17,15 +17,11 @@ const Blog = () => {
   useEffect(() => {
     const loadAllPosts = async () => {
       try {
-        // Load both static posts and markdown posts
-        const [staticPosts, markdownPosts] = await Promise.all([
-          getBlogPosts(),
-          loadMarkdownPosts()
-        ]);
+        // Load only markdown posts - this is the primary content source
+        const markdownPosts = await loadMarkdownPosts();
         
-        // Combine and sort by date
-        const allPosts = [...staticPosts, ...markdownPosts];
-        const sortedPosts = allPosts.sort((a, b) => 
+        // Sort by date (newest first)
+        const sortedPosts = markdownPosts.sort((a, b) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         
