@@ -1,6 +1,6 @@
 
 import { BlogCard } from "@/components/BlogCard";
-import { BlogPost } from "@/data/blogPosts";
+import { BlogPost } from "@/types/blog";
 import { loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";

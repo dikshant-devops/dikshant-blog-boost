@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BlogPost } from "@/data/blogPosts";
+import { BlogPost } from "@/types/blog";
 
 // Function to load and parse markdown files
 export async function loadMarkdownPosts(): Promise<BlogPost[]> {

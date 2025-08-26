@@ -2,11 +2,20 @@ import { Link } from "react-router-dom";
 import { BlogCard } from "@/components/BlogCard";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Button } from "@/components/ui/button";
-import { blogPosts } from "@/data/blogPosts";
+import { loadMarkdownPosts } from "@/utils/markdownLoader";
+import { useState, useEffect } from "react";
 import { BookOpen, Zap, Users } from "lucide-react";
 
 const Index = () => {
-  const featuredPosts = blogPosts.slice(0, 3);
+  const [featuredPosts, setFeaturedPosts] = useState([]);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      const posts = await loadMarkdownPosts();
+      setFeaturedPosts(posts.slice(0, 3));
+    };
+    loadPosts();
+  }, []);
 
   return (
     <>

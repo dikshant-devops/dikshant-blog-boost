@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock } from "lucide-react";
-import { BlogPost } from "@/data/blogPosts";
+import { BlogPost } from "@/types/blog";
 
 interface BlogCardProps {
   post: BlogPost;

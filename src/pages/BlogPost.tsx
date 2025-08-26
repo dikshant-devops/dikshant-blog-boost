@@ -5,10 +5,10 @@ import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
-import { getBlogPosts, getBlogPost, type BlogPost } from "@/data/blogPosts";
+import { type BlogPost } from "@/types/blog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { loadMarkdownPost } from "@/utils/markdownLoader";
+import { loadMarkdownPost, loadMarkdownPosts } from "@/utils/markdownLoader";
 
 const BlogPost = () => {
   const { id } = useParams();
@@ -19,18 +19,12 @@ const BlogPost = () => {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        // First try to get from static data
-        const foundPost = await getBlogPost(id || '');
-        if (foundPost) {
-          setPost(foundPost);
-        } else {
-          // Try loading from markdown file
-          const markdownPost = await loadMarkdownPost(id || '');
-          setPost(markdownPost);
-        }
+        // Load from markdown file
+        const markdownPost = await loadMarkdownPost(id || '');
+        setPost(markdownPost);
         
         // Load all posts for related posts section
-        const allPosts = await getBlogPosts();
+        const allPosts = await loadMarkdownPosts();
         setAllPosts(allPosts);
       } catch (error) {
         console.error('Error loading post:', error);
