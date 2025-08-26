@@ -1,8 +1,19 @@
-import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Mail, Users, Calendar } from "lucide-react";
+import { useEffect } from "react";
 
 const Newsletter = () => {
+  // Dynamically load the Beehiiv script for React compatibility
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://subscribe-forms.beehiiv.com/embed.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   return (
     <>
       <div className="container mx-auto py-12 px-4">
@@ -20,7 +31,25 @@ const Newsletter = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
             {/* Newsletter Signup */}
             <div>
-              <NewsletterSignup />
+              {/* Beehiiv Embed Start */}
+              <iframe
+                src="https://subscribe-forms.beehiiv.com/04007123-a5c8-4537-be45-92cfb6ff18ce"
+                className="beehiiv-embed"
+                data-test-id="beehiiv-embed"
+                frameBorder="0"
+                scrolling="no"
+                style={{
+                  width: "660px",
+                  height: "307px",
+                  margin: 0,
+                  borderRadius: "0px",
+                  backgroundColor: "transparent",
+                  boxShadow: "0 0 #0000",
+                  maxWidth: "100%",
+                }}
+                title="Beehiiv Newsletter Signup"
+              ></iframe>
+              {/* Beehiiv Embed End */}
             </div>
 
             {/* Benefits */}
