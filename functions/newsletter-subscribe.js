@@ -39,62 +39,22 @@ async function handleRequest(context) {
       });
     }
 
-    console.log('Environment variables check:');
-    console.log('API Key exists:', !!env.BEEHIIV_API_KEY);
-    console.log('Publication ID:', env.BEEHIIV_PUBLICATION_ID);
-
-    const response = await fetch(
-      `https://api.beehiiv.com/v2/publications/${env.BEEHIIV_PUBLICATION_ID}/subscriptions`,
+    // For now, just return success to test the function works
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: 'Successfully subscribed to newsletter (test mode)' 
+      }),
       {
-        method: 'POST',
+        status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.BEEHIIV_API_KEY}`,
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
-        body: JSON.stringify({
-          email: email,
-          reactivate_existing: false,
-          send_welcome_email: true,
-        }),
       }
     );
-
-    console.log('Beehiiv API response status:', response.status);
-    const responseData = await response.json();
-    console.log('Beehiiv API response data:', responseData);
-
-    if (response.ok) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Successfully subscribed to newsletter' 
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          },
-        }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ 
-          error: responseData.message || 'Failed to subscribe' 
-        }),
-        {
-          status: response.status,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          },
-        }
-      );
-    }
   } catch (error) {
     console.error('Function error:', error);
     return new Response(
