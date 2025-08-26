@@ -27,7 +27,7 @@ const Index = () => {
                 Explore Blog
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary" asChild>
+            <Button size="lg" variant="secondary" asChild>
               <Link to="/newsletter">Subscribe to Newsletter</Link>
             </Button>
           </div>
@@ -106,20 +106,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Newsletter Section */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Stay <span className="text-gradient">Updated</span>
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              Get weekly DevOps tips, tutorials, and industry insights delivered to your inbox.
-            </p>
-          </div>
-          <NewsletterSignup />
-        </div>
-      </section>
     </>
   );
 };
