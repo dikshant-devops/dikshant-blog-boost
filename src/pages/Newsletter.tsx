@@ -33,14 +33,14 @@ const Newsletter = () => {
             <div>
               {/* Beehiiv Embed Start */}
               <iframe
-                src="https://subscribe-forms.beehiiv.com/f64f313b-c0d8-40cb-98af-e51ae294b39c"
+                src="https://subscribe-forms.beehiiv.com/04007123-a5c8-4537-be45-92cfb6ff18ce"
                 className="beehiiv-embed"
                 data-test-id="beehiiv-embed"
                 frameBorder="0"
                 scrolling="no"
                 style={{
                   width: "660px",
-                  height: "391px",
+                  height: "307px",
                   margin: 0,
                   borderRadius: "0px",
                   backgroundColor: "transparent",
