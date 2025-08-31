@@ -1,2 +1,5 @@
 # Netlify redirects file for SPA routing
 /*    /index.html   200
+
+/newsletter        https://newsletter.techwithdikshant.com/           301
+/newsletter/*      https://newsletter.techwithdikshant.com/:splat     301
