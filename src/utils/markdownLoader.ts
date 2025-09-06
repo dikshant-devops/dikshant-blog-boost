@@ -5,10 +5,8 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
   const posts: BlogPost[] = [];
   
   try {
-    // Dynamically load all .md files from the blog-posts directory
-    // This approach fetches a directory listing or uses a manifest
-    // For now, we'll try to load common markdown files and handle 404s gracefully
-    const commonFiles = [
+    // Only load actual markdown files that exist
+    const markdownFiles = [
       'getting-started-with-docker.md',
       'kubernetes-introduction.md', 
       'github-actions-cicd.md',
@@ -17,21 +15,20 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
       'Cloud_Armor.md'
     ];
     
-    // Try to load additional files that might exist
-    const additionalFiles = Array.from({length: 20}, (_, i) => `blog-post-${i + 1}.md`);
-    const allPossibleFiles = [...commonFiles, ...additionalFiles];
-    
-    const loadPromises = allPossibleFiles.map(async (filename) => {
+    const loadPromises = markdownFiles.map(async (filename) => {
       try {
         const response = await fetch(`/blog-posts/${filename}`);
         if (response.ok) {
           const content = await response.text();
-          const post = parseMarkdownFile(content, filename);
-          return post;
+          // Check if response is actually markdown (not HTML)
+          if (content.includes('---') || content.includes('# ')) {
+            const post = parseMarkdownFile(content, filename);
+            return post;
+          }
         }
         return null;
       } catch (error) {
-        // Silently handle files that don't exist
+        console.warn(`Failed to load ${filename}:`, error);
         return null;
       }
     });
