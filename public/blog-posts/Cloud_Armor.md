@@ -1,8 +1,16 @@
+---
+title: "Understanding Google Cloud Armor: A Complete Guide"
+excerpt: "Learn how Google Cloud Armor provides DDoS protection and web application firewall capabilities to secure your cloud workloads at scale."
+date: "2024-01-15"
+readTime: "8 min read"
+tags: ["Google Cloud", "Security", "DDoS", "WAF", "Cloud Armor"]
+---
+
 # Understanding Google Cloud Armor: A Complete Guide
 
 Securing applications exposed to the internet has become more critical than ever. Distributed Denial-of-Service (DDoS) attacks, malicious traffic, and abuse patterns are increasing in frequency and complexity. Google Cloud offers **Cloud Armor**, a powerful security service designed to protect your workloads at scale.  
 
-In this blog, we’ll explore Cloud Armor from the ground up—what it is, how it works, features, use cases, pricing, and best practices.  
+In this blog, we'll explore Cloud Armor from the ground up—what it is, how it works, features, use cases, pricing, and best practices.  
 
 ---
 
@@ -17,7 +25,7 @@ Cloud Armor sits in front of your Google Cloud load balancers and filters traffi
 ## 🛡️ Key Features of Cloud Armor
 
 1. **DDoS Protection**  
-   - Built on Google’s global infrastructure.  
+   - Built on Google's global infrastructure.  
    - Mitigates volumetric and protocol-based attacks.  
    - Always-on protection with no need for manual intervention.
 
@@ -123,7 +131,7 @@ Cloud Armor pricing is based on:
 
 ## 🚀 Why Choose Cloud Armor?
 
-Google Cloud Armor brings Google-scale security to your workloads. Instead of building custom firewalls or relying on external appliances, you benefit from Google’s battle-tested defense mechanisms used to protect services like YouTube, Gmail, and Search.
+Google Cloud Armor brings Google-scale security to your workloads. Instead of building custom firewalls or relying on external appliances, you benefit from Google's battle-tested defense mechanisms used to protect services like YouTube, Gmail, and Search.
 	•	Scalability: Protection grows with your traffic.
 	•	Simplicity: Integrates natively with Google Cloud load balancers.
 	•	Cost-efficient: Pay per request, not per appliance.
@@ -132,6 +140,6 @@ Google Cloud Armor brings Google-scale security to your workloads. Instead of bu
 
 ## 🔮 Conclusion
 
-Cloud Armor is not just a firewall—it’s a comprehensive security shield for your cloud workloads. By combining DDoS protection, WAF, adaptive ML-based detection, and granular access controls, it allows businesses to focus on growth while staying secure.
+Cloud Armor is not just a firewall—it's a comprehensive security shield for your cloud workloads. By combining DDoS protection, WAF, adaptive ML-based detection, and granular access controls, it allows businesses to focus on growth while staying secure.
 
-If you’re running internet-facing workloads on GCP, Cloud Armor should be a key part of your security strategy.
+If you're running internet-facing workloads on GCP, Cloud Armor should be a key part of your security strategy.

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { BlogPost } from "@/types/blog";
 
-// Function to load and parse markdown files
 export async function loadMarkdownPosts(): Promise<BlogPost[]> {
   const posts: BlogPost[] = [];
   
   try {
-    // In a real implementation, you would read from a directory
-    // For now, we'll simulate loading the markdown files we created
-    const markdownFiles = [
+    // Dynamically load all .md files from the blog-posts directory
+    // This approach fetches a directory listing or uses a manifest
+    // For now, we'll try to load common markdown files and handle 404s gracefully
+    const commonFiles = [
       'getting-started-with-docker.md',
       'kubernetes-introduction.md', 
       'github-actions-cicd.md',
@@ -17,22 +17,29 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
       'Cloud_Armor.md'
     ];
     
-    for (const filename of markdownFiles) {
+    // Try to load additional files that might exist
+    const additionalFiles = Array.from({length: 20}, (_, i) => `blog-post-${i + 1}.md`);
+    const allPossibleFiles = [...commonFiles, ...additionalFiles];
+    
+    const loadPromises = allPossibleFiles.map(async (filename) => {
       try {
         const response = await fetch(`/blog-posts/${filename}`);
         if (response.ok) {
           const content = await response.text();
           const post = parseMarkdownFile(content, filename);
-          if (post) {
-            posts.push(post);
-          }
-        } else {
-          console.warn(`Could not load ${filename}: ${response.status}`);
+          return post;
         }
+        return null;
       } catch (error) {
-        console.warn(`Failed to load ${filename}:`, error);
+        // Silently handle files that don't exist
+        return null;
       }
-    }
+    });
+    
+    const results = await Promise.all(loadPromises);
+    const validPosts = results.filter((post): post is BlogPost => post !== null);
+    posts.push(...validPosts);
+    
   } catch (error) {
     console.error('Error loading markdown posts:', error);
   }
