@@ -161,10 +161,24 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
 // Function to load a single markdown post by ID
 export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
   try {
-    const response = await fetch(`/blog-posts/${id}.md`);
+    // Map IDs to actual filenames
+    const filenameMap: { [key: string]: string } = {
+      'getting-started-with-docker': 'getting-started-with-docker.md',
+      'kubernetes-introduction': 'kubernetes-introduction.md',
+      'github-actions-cicd': 'github-actions-cicd.md',
+      'essential-git-commands': 'essential-git-commands.md',
+      'git-commands-visual-guide': 'git-commands-visual-guide.md',
+      'cloud-armor': 'Cloud_Armor.md'
+    };
+    
+    const filename = filenameMap[id] || `${id}.md`;
+    const response = await fetch(`/blog-posts/${filename}`);
     if (response.ok) {
       const content = await response.text();
-      return parseMarkdownFile(content, `${id}.md`);
+      // Check if response is actually markdown (not HTML)
+      if (content.includes('# ') || content.includes('## ')) {
+        return parseMarkdownFile(content, filename);
+      }
     }
   } catch (error) {
     console.warn(`Failed to load post ${id}:`, error);
