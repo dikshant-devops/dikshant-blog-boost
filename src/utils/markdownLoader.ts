@@ -12,7 +12,9 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
       'getting-started-with-docker.md',
       'kubernetes-introduction.md', 
       'github-actions-cicd.md',
-      'sample-post.md'
+      'essential-git-commands.md',
+      'git-commands-visual-guide.md',
+      'Cloud_Armor.md'
     ];
     
     for (const filename of markdownFiles) {
