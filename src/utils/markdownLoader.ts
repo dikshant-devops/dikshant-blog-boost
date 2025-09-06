@@ -45,60 +45,112 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
   return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-// Parse frontmatter and content from markdown file
+// Parse markdown file with or without frontmatter
 function parseMarkdownFile(content: string, filename: string): BlogPost | null {
   try {
-    // Simple frontmatter parser
+    let title = '';
+    let excerpt = '';
+    let date = '';
+    let readTime = '';
+    let tags: string[] = [];
+    let markdownContent = content;
+
+    // Check if file has frontmatter
     const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
-    const match = content.match(frontmatterRegex);
+    const frontmatterMatch = content.match(frontmatterRegex);
     
-    if (!match) {
-      console.warn(`No frontmatter found in ${filename}`);
-      return null;
-    }
-    
-    const frontmatter = match[1];
-    const markdownContent = match[2];
-    
-    // Parse frontmatter YAML-like content
-    const metadata: any = {};
-    const lines = frontmatter.split('\n');
-    
-    for (const line of lines) {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex > 0) {
-        const key = line.substring(0, colonIndex).trim();
-        let value = line.substring(colonIndex + 1).trim();
-        
-        // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) || 
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-        
-        // Handle arrays (tags)
-        if (key === 'tags' && value.startsWith('[') && value.endsWith(']')) {
-          const tagsArray = value.slice(1, -1).split(',').map(tag => 
-            tag.trim().replace(/^["']|["']$/g, '')
-          );
-          metadata[key] = tagsArray;
-        } else {
-          metadata[key] = value;
+    if (frontmatterMatch) {
+      // Parse frontmatter if it exists
+      const frontmatter = frontmatterMatch[1];
+      markdownContent = frontmatterMatch[2];
+      
+      const metadata: any = {};
+      const lines = frontmatter.split('\n');
+      
+      for (const line of lines) {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex > 0) {
+          const key = line.substring(0, colonIndex).trim();
+          let value = line.substring(colonIndex + 1).trim();
+          
+          // Remove quotes if present
+          if ((value.startsWith('"') && value.endsWith('"')) || 
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          
+          // Handle arrays (tags)
+          if (key === 'tags' && value.startsWith('[') && value.endsWith(']')) {
+            const tagsArray = value.slice(1, -1).split(',').map(tag => 
+              tag.trim().replace(/^["']|["']$/g, '')
+            );
+            metadata[key] = tagsArray;
+          } else {
+            metadata[key] = value;
+          }
         }
       }
+      
+      title = metadata.title || '';
+      excerpt = metadata.excerpt || '';
+      date = metadata.date || '';
+      readTime = metadata.readTime || '';
+      tags = Array.isArray(metadata.tags) ? metadata.tags : [];
     }
-    
+
+    // Generate defaults if no frontmatter or missing fields
+    if (!title) {
+      // Extract title from first heading or filename
+      const headingMatch = markdownContent.match(/^#\s+(.+)$/m);
+      title = headingMatch ? headingMatch[1] : filename.replace('.md', '').replace(/[-_]/g, ' ');
+    }
+
+    if (!excerpt) {
+      // Generate excerpt from first paragraph
+      const paragraphs = markdownContent.split('\n\n').filter(p => 
+        p.trim() && !p.startsWith('#') && !p.startsWith('```') && !p.startsWith('---')
+      );
+      excerpt = paragraphs[0] ? paragraphs[0].substring(0, 150) + '...' : 'No description available';
+    }
+
+    if (!date) {
+      // Use current date if no date specified
+      date = new Date().toISOString().split('T')[0];
+    }
+
+    if (!readTime) {
+      // Estimate read time (average 200 words per minute)
+      const wordCount = markdownContent.split(/\s+/).length;
+      const minutes = Math.ceil(wordCount / 200);
+      readTime = `${minutes} min read`;
+    }
+
+    if (tags.length === 0) {
+      // Generate tags from filename or content
+      const fileBasedTags = [];
+      const fileName = filename.toLowerCase();
+      
+      if (fileName.includes('docker')) fileBasedTags.push('Docker');
+      if (fileName.includes('kubernetes') || fileName.includes('k8s')) fileBasedTags.push('Kubernetes');
+      if (fileName.includes('git')) fileBasedTags.push('Git');
+      if (fileName.includes('cloud')) fileBasedTags.push('Cloud');
+      if (fileName.includes('github')) fileBasedTags.push('GitHub');
+      if (fileName.includes('ci') || fileName.includes('cd')) fileBasedTags.push('CI/CD');
+      
+      tags = fileBasedTags.length > 0 ? fileBasedTags : ['DevOps'];
+    }
+
     // Generate ID from filename
     const id = filename.replace('.md', '').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-    
+
     return {
       id,
-      title: metadata.title || 'Untitled',
-      excerpt: metadata.excerpt || '',
-      date: metadata.date || new Date().toISOString(),
-      readTime: metadata.readTime || '5 min read',
-      tags: Array.isArray(metadata.tags) ? metadata.tags : ['Blog'],
-      content: markdownContent
+      title: title.trim(),
+      excerpt: excerpt.trim(),
+      date,
+      readTime,
+      tags,
+      content: markdownContent.trim()
     };
   } catch (error) {
     console.error(`Error parsing ${filename}:`, error);

@@ -1,11 +1,3 @@
----
-title: "Understanding Google Cloud Armor: A Complete Guide"
-excerpt: "Learn how Google Cloud Armor provides DDoS protection and web application firewall capabilities to secure your cloud workloads at scale."
-date: "2024-01-15"
-readTime: "8 min read"
-tags: ["Google Cloud", "Security", "DDoS", "WAF", "Cloud Armor"]
----
-
 # Understanding Google Cloud Armor: A Complete Guide
 
 Securing applications exposed to the internet has become more critical than ever. Distributed Denial-of-Service (DDoS) attacks, malicious traffic, and abuse patterns are increasing in frequency and complexity. Google Cloud offers **Cloud Armor**, a powerful security service designed to protect your workloads at scale.  
