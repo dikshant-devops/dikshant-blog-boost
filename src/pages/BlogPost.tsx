@@ -15,6 +15,28 @@ const BlogPost = () => {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [allPosts, setAllPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // SEO optimization - call hooks consistently
+  useSEO({
+    title: post ? `${post.title} | Tech With Dikshant` : 'Loading... | Tech With Dikshant',
+    description: post?.excerpt || 'Loading blog post...',
+    keywords: post?.tags.join(', ') || '',
+    author: 'Dikshant',
+    type: 'article',
+    url: `${window.location.origin}/blog/${id}`,
+    publishedTime: post ? new Date(post.date).toISOString() : undefined,
+    tags: post?.tags || []
+  });
+
+  // Add structured data for better search engine understanding
+  useArticleStructuredData({
+    title: post?.title || 'Loading...',
+    description: post?.excerpt || 'Loading blog post...',
+    author: 'Dikshant',
+    datePublished: post ? new Date(post.date).toISOString() : new Date().toISOString(),
+    tags: post?.tags || [],
+    readTime: post?.readTime || '5 min'
+  });
   
   useEffect(() => {
     const fetchPost = async () => {
@@ -54,28 +76,6 @@ const BlogPost = () => {
     year: "numeric",
     month: "long",
     day: "numeric"
-  });
-
-  // SEO optimization for the blog post
-  useSEO({
-    title: `${post.title} | Tech With Dikshant`,
-    description: post.excerpt,
-    keywords: post.tags.join(', '),
-    author: 'Dikshant',
-    type: 'article',
-    url: `${window.location.origin}/blog/${post.id}`,
-    publishedTime: new Date(post.date).toISOString(),
-    tags: post.tags
-  });
-
-  // Add structured data for better search engine understanding
-  useArticleStructuredData({
-    title: post.title,
-    description: post.excerpt,
-    author: 'Dikshant',
-    datePublished: new Date(post.date).toISOString(),
-    tags: post.tags,
-    readTime: post.readTime
   });
 
   return (
