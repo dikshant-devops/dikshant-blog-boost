@@ -6,12 +6,21 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const Blog = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // SEO optimization for the blog listing page
+  useSEO({
+    title: "DevOps Blog - Tutorials & Best Practices | Tech With Dikshant",
+    description: "Explore comprehensive DevOps tutorials covering Docker, Kubernetes, CI/CD, cloud technologies, and automation best practices.",
+    keywords: "DevOps blog, Docker tutorials, Kubernetes guide, CI/CD pipeline, cloud computing, automation, DevOps best practices",
+    type: "website"
+  });
 
   // Load blog posts on component mount
   useEffect(() => {

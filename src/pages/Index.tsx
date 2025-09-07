@@ -5,9 +5,18 @@ import { Button } from "@/components/ui/button";
 import { loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useState, useEffect } from "react";
 import { BookOpen, Zap, Users } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const Index = () => {
   const [featuredPosts, setFeaturedPosts] = useState([]);
+
+  // SEO optimization for the homepage
+  useSEO({
+    title: "Tech With Dikshant - DevOps Tutorials & Insights",
+    description: "Master DevOps with practical tutorials on Docker, Kubernetes, CI/CD, and cloud technologies. Learn from real-world examples and best practices.",
+    keywords: "DevOps, Docker, Kubernetes, CI/CD, GitHub Actions, Cloud, Automation, Tutorials",
+    type: "website"
+  });
 
   useEffect(() => {
     const loadPosts = async () => {

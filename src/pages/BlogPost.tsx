@@ -8,6 +8,7 @@ import { type BlogPost } from "@/types/blog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { loadMarkdownPost, loadMarkdownPosts } from "@/utils/markdownLoader";
+import { useSEO, useArticleStructuredData } from "@/hooks/useSEO";
 
 const BlogPost = () => {
   const { id } = useParams();
@@ -53,6 +54,28 @@ const BlogPost = () => {
     year: "numeric",
     month: "long",
     day: "numeric"
+  });
+
+  // SEO optimization for the blog post
+  useSEO({
+    title: `${post.title} | Tech With Dikshant`,
+    description: post.excerpt,
+    keywords: post.tags.join(', '),
+    author: 'Dikshant',
+    type: 'article',
+    url: `${window.location.origin}/blog/${post.id}`,
+    publishedTime: new Date(post.date).toISOString(),
+    tags: post.tags
+  });
+
+  // Add structured data for better search engine understanding
+  useArticleStructuredData({
+    title: post.title,
+    description: post.excerpt,
+    author: 'Dikshant',
+    datePublished: new Date(post.date).toISOString(),
+    tags: post.tags,
+    readTime: post.readTime
   });
 
   return (
