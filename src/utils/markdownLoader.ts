@@ -5,15 +5,9 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
   const posts: BlogPost[] = [];
   
   try {
-    // Only load actual markdown files that exist
-    const markdownFiles = [
-      'getting-started-with-docker.md',
-      'kubernetes-introduction.md', 
-      'github-actions-cicd.md',
-      'essential-git-commands.md',
-      'git-commands-visual-guide.md',
-      'Cloud_Armor.md'
-    ];
+    // Use import.meta.glob to automatically discover all markdown files
+    const modules = import.meta.glob('/public/blog-posts/*.md', { as: 'url' });
+    const markdownFiles = Object.keys(modules).map(path => path.split('/').pop()!);
     
     const loadPromises = markdownFiles.map(async (filename) => {
       try {
@@ -136,6 +130,8 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
       if (fileName.includes('cloud')) fileBasedTags.push('Cloud');
       if (fileName.includes('github')) fileBasedTags.push('GitHub');
       if (fileName.includes('ci') || fileName.includes('cd')) fileBasedTags.push('CI/CD');
+      if (fileName.includes('routing') || fileName.includes('load-balancer')) fileBasedTags.push('Networking');
+      if (fileName.includes('host') || fileName.includes('path')) fileBasedTags.push('Load Balancer');
       
       tags = fileBasedTags.length > 0 ? fileBasedTags : ['DevOps'];
     }
@@ -168,7 +164,8 @@ export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
       'github-actions-cicd': 'github-actions-cicd.md',
       'essential-git-commands': 'essential-git-commands.md',
       'git-commands-visual-guide': 'git-commands-visual-guide.md',
-      'cloud-armor': 'Cloud_Armor.md'
+      'cloud-armor': 'Cloud_Armor.md',
+      'host-based-vs-path-based-routing': 'Host-Based vs Path-Based Routing.md'
     };
     
     const filename = filenameMap[id] || `${id}.md`;
