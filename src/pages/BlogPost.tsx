@@ -1,7 +1,6 @@
 import { useParams, Navigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 
-import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
@@ -153,7 +152,31 @@ const BlogPost = () => {
 
         {/* Newsletter Signup */}
         <div className="mt-12 pt-8 border-t">
-          <NewsletterSignup variant="inline" />
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-semibold mb-2">Subscribe to Our Newsletter</h3>
+            <p className="text-muted-foreground">
+              Get the latest DevOps tips and tutorials delivered to your inbox
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <iframe
+              src="https://subscribe-forms.beehiiv.com/04007123-a5c8-4537-be45-92cfb6ff18ce"
+              className="beehiiv-embed"
+              data-test-id="beehiiv-embed"
+              frameBorder="0"
+              scrolling="no"
+              style={{
+                width: "660px",
+                height: "307px",
+                margin: 0,
+                borderRadius: "8px",
+                backgroundColor: "transparent",
+                boxShadow: "0 0 #0000",
+                maxWidth: "100%",
+              }}
+              title="Beehiiv Newsletter Signup"
+            />
+          </div>
         </div>
 
         {/* Related Posts */}
