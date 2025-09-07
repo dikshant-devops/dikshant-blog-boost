@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BlogPost } from "@/types/blog";
+import { TAG_CONFIGS } from "@/config/tags";
 
 export async function loadMarkdownPosts(): Promise<BlogPost[]> {
   const posts: BlogPost[] = [];
@@ -120,24 +121,36 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
     }
 
     if (tags.length === 0) {
-      // Generate tags from filename or content
-      const fileBasedTags = [];
+      // Auto-detect tags from filename and content if not specified in frontmatter
+      const autoTags = [];
       const fileName = filename.toLowerCase();
+      const contentLower = markdownContent.toLowerCase();
       
-      if (fileName.includes('docker')) fileBasedTags.push('Docker');
-      if (fileName.includes('kubernetes') || fileName.includes('k8s')) fileBasedTags.push('Kubernetes');
-      if (fileName.includes('git')) fileBasedTags.push('Git');
-      if (fileName.includes('cloud')) fileBasedTags.push('Cloud');
-      if (fileName.includes('github')) fileBasedTags.push('GitHub');
-      if (fileName.includes('ci') || fileName.includes('cd')) fileBasedTags.push('CI/CD');
-      if (fileName.includes('routing') || fileName.includes('load-balancer')) fileBasedTags.push('Networking');
-      if (fileName.includes('host') || fileName.includes('path')) fileBasedTags.push('Load Balancer');
+      // Check against all available tag configs
+      Object.keys(TAG_CONFIGS).forEach(tagName => {
+        const tagLower = tagName.toLowerCase();
+        if (fileName.includes(tagLower) || contentLower.includes(tagLower)) {
+          autoTags.push(tagName);
+        }
+      });
       
-      tags = fileBasedTags.length > 0 ? fileBasedTags : ['DevOps'];
+      // Special cases for common variations
+      if (fileName.includes('k8s') || contentLower.includes('k8s')) autoTags.push('Kubernetes');
+      if (fileName.includes('cicd') || fileName.includes('ci-cd')) autoTags.push('CI/CD');
+      if (fileName.includes('routing') || fileName.includes('load-balancer')) autoTags.push('Networking', 'Load Balancer');
+      if (fileName.includes('host') || fileName.includes('path')) autoTags.push('Load Balancer');
+      
+      tags = autoTags.length > 0 ? [...new Set(autoTags)] : ['DevOps'];
     }
 
-    // Generate ID from filename
-    const id = filename.replace('.md', '').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    // Generate ID from filename - handle any filename format
+    const id = filename
+      .replace('.md', '')
+      .replace(/[^a-z0-9\s]/gi, '-') // Replace special chars with dashes
+      .replace(/\s+/g, '-') // Replace spaces with dashes
+      .replace(/-+/g, '-') // Replace multiple dashes with single dash
+      .replace(/^-|-$/g, '') // Remove leading/trailing dashes
+      .toLowerCase();
 
     return {
       id,
@@ -157,24 +170,35 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
 // Function to load a single markdown post by ID
 export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
   try {
-    // Map IDs to actual filenames
-    const filenameMap: { [key: string]: string } = {
-      'getting-started-with-docker': 'getting-started-with-docker.md',
-      'kubernetes-introduction': 'kubernetes-introduction.md',
-      'github-actions-cicd': 'github-actions-cicd.md',
-      'essential-git-commands': 'essential-git-commands.md',
-      'git-commands-visual-guide': 'git-commands-visual-guide.md',
-      'cloud-armor': 'Cloud_Armor.md',
-      'host-based-vs-path-based-routing': 'Host-Based vs Path-Based Routing.md'
-    };
+    // First, try to load all posts and find the one with matching ID
+    const allPosts = await loadMarkdownPosts();
+    const post = allPosts.find(p => p.id === id);
     
-    const filename = filenameMap[id] || `${id}.md`;
-    const response = await fetch(`/blog-posts/${filename}`);
-    if (response.ok) {
-      const content = await response.text();
-      // Check if response is actually markdown (not HTML)
-      if (content.includes('# ') || content.includes('## ')) {
-        return parseMarkdownFile(content, filename);
+    if (post) {
+      return post;
+    }
+    
+    // Fallback: try direct filename mapping
+    const possibleFilenames = [
+      `${id}.md`,
+      `${id.replace(/-/g, '_')}.md`,
+      `${id.replace(/-/g, ' ')}.md`,
+      `${id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}.md`,
+      `${id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('_')}.md`
+    ];
+    
+    for (const filename of possibleFilenames) {
+      try {
+        const response = await fetch(`/blog-posts/${filename}`);
+        if (response.ok) {
+          const content = await response.text();
+          if (content.includes('# ') || content.includes('## ')) {
+            return parseMarkdownFile(content, filename);
+          }
+        }
+      } catch (error) {
+        // Continue to next filename
+        continue;
       }
     }
   } catch (error) {
