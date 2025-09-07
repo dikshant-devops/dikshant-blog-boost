@@ -7,7 +7,7 @@ import { Linkedin, Twitter, Github, Mail, MessageCircle, Calendar, ExternalLink 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const Connect = () => {
+export default function Connect() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -271,6 +271,4 @@ const Connect = () => {
       </div>
     </>
   );
-};
-
-export default Connect;
+}
