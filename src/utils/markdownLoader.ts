@@ -19,9 +19,32 @@ export async function loadMarkdownPosts(forceRefresh = false): Promise<BlogPost[
   const posts: BlogPost[] = [];
 
   try {
-    // Use import.meta.glob to automatically discover all markdown files
-    const modules = import.meta.glob('/public/blog-posts/*.md', { query: '?url', import: 'default' });
-    const markdownFiles = Object.keys(modules).map(path => path.split('/').pop()!);
+    // IMPORTANT: import.meta.glob cannot access /public/ folder in Vite
+    // The /public/ folder is for static assets, not for module imports
+    // Solution: Fetch a manifest file that lists all markdown files
+    // This manifest can be auto-generated during build or manually updated
+    let markdownFiles: string[] = [];
+
+    try {
+      const manifestResponse = await fetch('/blog-posts-manifest.json');
+      if (manifestResponse.ok) {
+        markdownFiles = await manifestResponse.json();
+        console.log('[markdownLoader] Loaded manifest with files:', markdownFiles);
+      } else {
+        throw new Error('Manifest not found');
+      }
+    } catch (error) {
+      // Fallback to hardcoded list if manifest is not available
+      console.warn('[markdownLoader] Could not load manifest, using fallback list:', error);
+      markdownFiles = [
+        'github-actions-cicd.md',
+        'git-commands-visual-guide.md',
+        'getting-started-with-docker.md',
+        'Host-Based vs Path-Based Routing.md',
+        'Cloud_Armor.md',
+        'kubernetes-introduction.md'
+      ];
+    }
 
     const loadPromises = markdownFiles.map(async (filename) => {
       try {
