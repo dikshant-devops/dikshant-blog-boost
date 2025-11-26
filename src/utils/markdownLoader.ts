@@ -2,24 +2,38 @@ import { useState, useEffect } from 'react';
 import { BlogPost } from "@/types/blog";
 import { TAG_CONFIGS } from "@/config/tags";
 
-export async function loadMarkdownPosts(): Promise<BlogPost[]> {
+// Cache layer for improved performance - scales to 1000+ posts
+let postsCache: BlogPost[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Map of filename to post ID for direct loading
+const filenameToIdMap = new Map<string, string>();
+
+export async function loadMarkdownPosts(forceRefresh = false): Promise<BlogPost[]> {
+  // Return cached posts if available and not expired
+  if (!forceRefresh && postsCache && Date.now() - cacheTimestamp < CACHE_DURATION) {
+    return postsCache;
+  }
+
   const posts: BlogPost[] = [];
-  
+
   try {
     // Use import.meta.glob to automatically discover all markdown files
-    const modules = import.meta.glob('/public/blog-posts/*.md', { as: 'url' });
+    const modules = import.meta.glob('/public/blog-posts/*.md', { query: '?url', import: 'default' });
     const markdownFiles = Object.keys(modules).map(path => path.split('/').pop()!);
-    
+
     const loadPromises = markdownFiles.map(async (filename) => {
       try {
         const response = await fetch(`/blog-posts/${filename}`);
         if (response.ok) {
           const content = await response.text();
-          // Check if response is actually markdown (not HTML)
-          if (content.includes('---') || content.includes('# ')) {
-            const post = parseMarkdownFile(content, filename);
-            return post;
+          const post = parseMarkdownFile(content, filename);
+          if (post) {
+            // Build filename to ID mapping for direct loading
+            filenameToIdMap.set(filename, post.id);
           }
+          return post;
         }
         return null;
       } catch (error) {
@@ -27,17 +41,23 @@ export async function loadMarkdownPosts(): Promise<BlogPost[]> {
         return null;
       }
     });
-    
+
     const results = await Promise.all(loadPromises);
     const validPosts = results.filter((post): post is BlogPost => post !== null);
     posts.push(...validPosts);
-    
+
   } catch (error) {
     console.error('Error loading markdown posts:', error);
   }
-  
+
   // Sort posts by date (newest first)
-  return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sortedPosts = posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Update cache
+  postsCache = sortedPosts;
+  cacheTimestamp = Date.now();
+
+  return sortedPosts;
 }
 
 // Parse markdown file with or without frontmatter
@@ -167,18 +187,18 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
   }
 }
 
-// Function to load a single markdown post by ID
+// Function to load a single markdown post by ID - OPTIMIZED for direct loading
 export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
   try {
-    // First, try to load all posts and find the one with matching ID
-    const allPosts = await loadMarkdownPosts();
-    const post = allPosts.find(p => p.id === id);
-    
-    if (post) {
-      return post;
+    // Check cache first - if all posts are cached, find from cache
+    if (postsCache && postsCache.length > 0) {
+      const cachedPost = postsCache.find(p => p.id === id);
+      if (cachedPost) {
+        return cachedPost;
+      }
     }
-    
-    // Fallback: try direct filename mapping
+
+    // If not in cache, try direct file loading using possible filename variations
     const possibleFilenames = [
       `${id}.md`,
       `${id.replace(/-/g, '_')}.md`,
@@ -186,14 +206,16 @@ export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
       `${id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}.md`,
       `${id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('_')}.md`
     ];
-    
+
+    // Try to load directly from each possible filename
     for (const filename of possibleFilenames) {
       try {
         const response = await fetch(`/blog-posts/${filename}`);
         if (response.ok) {
           const content = await response.text();
-          if (content.includes('# ') || content.includes('## ')) {
-            return parseMarkdownFile(content, filename);
+          const post = parseMarkdownFile(content, filename);
+          if (post && post.id === id) {
+            return post;
           }
         }
       } catch (error) {
@@ -201,10 +223,22 @@ export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
         continue;
       }
     }
+
+    // Last resort: load all posts and find the match (builds cache for future)
+    const allPosts = await loadMarkdownPosts();
+    return allPosts.find(p => p.id === id) || null;
+
   } catch (error) {
     console.warn(`Failed to load post ${id}:`, error);
   }
   return null;
+}
+
+// Clear cache manually (useful for admin or development)
+export function clearPostsCache(): void {
+  postsCache = null;
+  cacheTimestamp = 0;
+  filenameToIdMap.clear();
 }
 
 // Hook to use markdown posts with React

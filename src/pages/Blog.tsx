@@ -1,8 +1,9 @@
 
 import { BlogCard } from "@/components/BlogCard";
+import { BlogCardSkeleton } from "@/components/BlogCardSkeleton";
 import { BlogPost } from "@/types/blog";
 import { loadMarkdownPosts } from "@/utils/markdownLoader";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
@@ -45,16 +46,29 @@ const Blog = () => {
     loadAllPosts();
   }, []);
 
-  // Get all unique tags
-  const allTags = Array.from(new Set(posts.flatMap(post => post.tags)));
+  // Memoize tag selection handlers - prevents new function creation on every render
+  const handleClearTag = useCallback(() => {
+    setSelectedTag("");
+  }, []);
 
-  // Filter posts based on search and tag
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTag = !selectedTag || post.tags.includes(selectedTag);
-    return matchesSearch && matchesTag;
-  });
+  const handleSelectTag = useCallback((tag: string) => {
+    setSelectedTag(tag);
+  }, []);
+
+  // Memoize all unique tags - only recalculate when posts change
+  const allTags = useMemo(() => {
+    return Array.from(new Set(posts.flatMap(post => post.tags)));
+  }, [posts]);
+
+  // Memoize filtered posts - only recalculate when dependencies change
+  const filteredPosts = useMemo(() => {
+    return posts.filter(post => {
+      const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTag = !selectedTag || post.tags.includes(selectedTag);
+      return matchesSearch && matchesTag;
+    });
+  }, [posts, searchTerm, selectedTag]);
 
   return (
     <>
@@ -82,10 +96,10 @@ const Blog = () => {
           </div>
           
           <div className="flex flex-wrap justify-center gap-2">
-            <Badge 
-              variant={selectedTag === "" ? "default" : "outline"} 
+            <Badge
+              variant={selectedTag === "" ? "default" : "outline"}
               className="cursor-pointer hover:bg-primary/80"
-              onClick={() => setSelectedTag("")}
+              onClick={handleClearTag}
             >
               All
             </Badge>
@@ -94,7 +108,7 @@ const Blog = () => {
                 key={tag}
                 variant={selectedTag === tag ? "default" : "outline"}
                 className="cursor-pointer hover:bg-primary/80"
-                onClick={() => setSelectedTag(tag)}
+                onClick={() => handleSelectTag(tag)}
               >
                 {tag}
               </Badge>
@@ -105,9 +119,15 @@ const Blog = () => {
         {/* Blog Posts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading ? (
-            <div className="text-center py-12 col-span-full">
-              <p className="text-lg text-muted-foreground">Loading blog posts...</p>
-            </div>
+            // Skeleton loading states for better UX
+            <>
+              <BlogCardSkeleton />
+              <BlogCardSkeleton />
+              <BlogCardSkeleton />
+              <BlogCardSkeleton />
+              <BlogCardSkeleton />
+              <BlogCardSkeleton />
+            </>
           ) : filteredPosts.length > 0 ? (
             filteredPosts.map((post) => (
               <BlogCard key={post.id} post={post} />

@@ -1,73 +1,206 @@
-# Welcome to your Lovable project
+# Tech With Dikshant - DevOps Blog
 
-## Project info
+A modern, high-performance blog platform focused on DevOps tutorials and best practices.
 
-**URL**: https://lovable.dev/projects/a8eba7c3-86b0-4f77-b819-fc7ecaae7238
+**Live URL**: https://techwithdikshant.com
 
-## How can I edit this code?
+## 🚀 Quick Start
 
-There are several ways of editing your application.
+### Prerequisites
+- Node.js 18+ and npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/a8eba7c3-86b0-4f77-b819-fc7ecaae7238) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Local Development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# Clone the repository
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navigate to project directory
+cd dikshant-blog-boost
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server (runs on http://localhost:8080)
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 📝 Adding Blog Posts
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+See [HOW_TO_ADD_BLOG_POSTS.md](./HOW_TO_ADD_BLOG_POSTS.md) for detailed instructions.
 
-**Use GitHub Codespaces**
+**Quick steps:**
+1. Create a `.md` file in `/public/blog-posts/`
+2. Add frontmatter (optional - auto-generated if missing)
+3. Write your content in Markdown
+4. Save - it appears automatically!
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Example**:
+```markdown
+---
+title: "My DevOps Tutorial"
+excerpt: "Learn Docker and Kubernetes"
+date: "2024-01-20"
+readTime: "5 min read"
+tags: ["Docker", "Kubernetes"]
+---
 
-## What technologies are used for this project?
+# My Tutorial Content
 
-This project is built with:
+Your blog post content here...
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🛠️ Development Commands
 
-## How can I deploy this project?
+```sh
+# Start development server
+npm run dev
 
-Simply open [Lovable](https://lovable.dev/projects/a8eba7c3-86b0-4f77-b819-fc7ecaae7238) and click on Share -> Publish.
+# Build for production
+npm run build
 
-## Can I connect a custom domain to my Lovable project?
+# Preview production build
+npm run preview
 
-Yes, you can!
+# Run linter
+npm run lint
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🧪 Testing
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+This project uses [Vitest](https://vitest.dev/) for testing.
+
+```sh
+# Run all tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+**Current Test Coverage**: 10/10 component tests passing
+
+## 🛠️ Tech Stack
+
+### Core
+- **React 18.3.1** - UI library
+- **TypeScript 5.8.3** - Type safety
+- **Vite 5.4.19** - Build tool with SWC
+- **React Router 6.30.1** - Client-side routing
+
+### UI & Styling
+- **shadcn/ui** - Component library (50+ components)
+- **Tailwind CSS 3.4.17** - Utility-first CSS
+- **Radix UI** - Accessible primitives
+- **Lucide React** - Icon library
+
+### Features
+- **Markdown Support** - Full GitHub Flavored Markdown
+- **SEO Optimized** - Meta tags, Open Graph, structured data
+- **Dark/Light Mode** - Theme switching with persistence
+- **Performance** - Intelligent caching, code-splitting, memoization
+- **Responsive** - Mobile-first design
+
+### Testing
+- **Vitest** - Fast unit testing
+- **React Testing Library** - Component testing
+- **jsdom** - DOM simulation
+
+## 📁 Project Structure
+
+```
+├── public/
+│   └── blog-posts/          # Markdown blog posts
+├── src/
+│   ├── components/          # Reusable components
+│   │   ├── ui/             # shadcn/ui components
+│   │   ├── BlogCard.tsx    # Blog post card
+│   │   └── ...
+│   ├── pages/              # Route components
+│   │   ├── Index.tsx       # Homepage
+│   │   ├── Blog.tsx        # Blog listing
+│   │   ├── BlogPost.tsx    # Individual post
+│   │   └── ...
+│   ├── hooks/              # Custom React hooks
+│   │   └── useSEO.tsx      # SEO management
+│   ├── utils/              # Utility functions
+│   │   └── markdownLoader.ts # Markdown parsing
+│   ├── config/             # Configuration
+│   │   └── tags.ts         # Blog tag configs
+│   └── types/              # TypeScript types
+└── tests/                  # Test files
+
+```
+
+## 🚀 Performance Features
+
+This blog is optimized for scale:
+
+- **Smart Caching**: 5-minute cache reduces redundant loads
+- **Code Splitting**: Markdown library loads only when needed
+- **Memoization**: Prevents unnecessary re-renders
+- **Lazy Loading**: Routes load on-demand
+- **Optimized SEO**: Batched DOM operations
+
+**Scalability**: Handles 1000+ blog posts efficiently with cache-first architecture.
+
+## 🎨 Adding Custom Tags
+
+Tags are defined in `src/config/tags.ts`. To add a new tag:
+
+```typescript
+export const TAG_CONFIGS: TagConfig = {
+  "Your New Tag": {
+    color: "bg-purple-500",    // Tailwind color class
+    textColor: "text-white"     // Text color class
+  }
+};
+```
+
+Available tags: Docker, Kubernetes, CI/CD, DevOps, AWS, Azure, GCP, Terraform, Ansible, Jenkins, GitHub Actions, Linux, Networking, Security, Monitoring, Cloud, Containers
+
+## 🌐 Deployment
+
+This project is configured for multiple deployment platforms:
+
+- **Netlify** (Primary) - See `netlify.toml`
+- **GitHub Pages** - See `.github/workflows/deploy.yml`
+- **Cloudflare Pages** - See `wrangler.toml`
+
+### Deploy to Netlify
+```sh
+npm run build
+# Deploy the dist/ folder
+```
+
+### Deploy to GitHub Pages
+Push to main branch - automated via GitHub Actions
+
+## 📚 Documentation
+
+- **[HOW_TO_ADD_BLOG_POSTS.md](./HOW_TO_ADD_BLOG_POSTS.md)** - Complete guide to adding blog posts
+- **[CLAUDE.md](./CLAUDE.md)** - Development documentation for Claude Code
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `npm run test`
+5. Build: `npm run build`
+6. Submit a pull request
+
+## 📄 License
+
+This project was created with [Lovable](https://lovable.dev)
+
+## 🔗 Links
+
+- **Live Site**: https://techwithdikshant.com
+- **Lovable Project**: https://lovable.dev/projects/a8eba7c3-86b0-4f77-b819-fc7ecaae7238

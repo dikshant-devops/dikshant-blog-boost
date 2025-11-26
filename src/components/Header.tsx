@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -6,6 +7,11 @@ import { useTheme } from "next-themes";
 export const Header = () => {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+
+  // Memoize theme toggle handler - prevents new function creation on every render
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  }, [theme, setTheme]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -55,7 +61,7 @@ export const Header = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={toggleTheme}
             className="h-9 w-9 p-0"
           >
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

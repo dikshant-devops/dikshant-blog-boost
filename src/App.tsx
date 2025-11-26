@@ -17,7 +17,18 @@ const Connect = lazy(() => import("./pages/Connect"));
 const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+// Configure QueryClient with optimized settings for better caching
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
+      gcTime: 10 * 60 * 1000, // 10 minutes - garbage collection (formerly cacheTime)
+      retry: 1, // Retry failed requests once
+      refetchOnWindowFocus: false, // Don't refetch on window focus (blog content doesn't change frequently)
+      refetchOnReconnect: false, // Don't refetch on reconnect
+    },
+  },
+});
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
