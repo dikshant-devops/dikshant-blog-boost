@@ -7,10 +7,10 @@ import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import { type BlogPost } from "@/types/blog";
 import { loadMarkdownPost, loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useSEO, useArticleStructuredData } from "@/hooks/useSEO";
+import remarkGfm from "remark-gfm";
 
-// Code-split markdown rendering - 47KB reduction on initial load
+// Code-split markdown rendering - loads only when viewing blog posts
 const ReactMarkdown = lazy(() => import("react-markdown"));
-const remarkGfm = lazy(() => import("remark-gfm").then(mod => ({ default: mod.default })));
 
 const BlogPost = () => {
   const { id } = useParams();
@@ -40,51 +40,17 @@ const BlogPost = () => {
     readTime: post?.readTime || '5 min'
   });
   
-  useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        // Optimized: Single call - cache handles efficiency
-        // loadMarkdownPost checks cache first, then loads directly
-        const markdownPost = await loadMarkdownPost(id || '');
-        setPost(markdownPost);
-
-        // Load all posts for related posts - uses cache if available
-        const allPosts = await loadMarkdownPosts();
-        setAllPosts(allPosts);
-      } catch (error) {
-        console.error('Error loading post:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPost();
-  }, [id]);
-  
-  if (loading) {
-    return (
-      <div className="container mx-auto py-12 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-lg text-muted-foreground">Loading blog post...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!post) {
-    return <Navigate to="/blog" replace />;
-  }
-
-  // Memoize expensive date formatting - only recalculate when post.date changes
+  // Memoize expensive date formatting - MUST be before early returns (Rules of Hooks)
   const formattedDate = useMemo(() => {
+    if (!post) return '';
     return new Date(post.date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric"
     });
-  }, [post.date]);
+  }, [post]);
 
-  // Memoize markdown components configuration
+  // Memoize markdown components configuration - MUST be before early returns
   const markdownComponents = useMemo(() => ({
     // Custom styling for code blocks
     pre: ({ children }: any) => (
@@ -134,6 +100,42 @@ const BlogPost = () => {
       </a>
     ),
   }), []);
+
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        // Optimized: Single call - cache handles efficiency
+        // loadMarkdownPost checks cache first, then loads directly
+        const markdownPost = await loadMarkdownPost(id || '');
+        setPost(markdownPost);
+
+        // Load all posts for related posts - uses cache if available
+        const allPosts = await loadMarkdownPosts();
+        setAllPosts(allPosts);
+      } catch (error) {
+        console.error('Error loading post:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [id]);
+
+  // Early returns AFTER all hooks
+  if (loading) {
+    return (
+      <div className="container mx-auto py-12 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-lg text-muted-foreground">Loading blog post...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!post) {
+    return <Navigate to="/blog" replace />;
+  }
 
   return (
     <>
