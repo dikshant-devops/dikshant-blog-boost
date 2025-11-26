@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { memo, useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock } from "lucide-react";
@@ -8,12 +9,16 @@ interface BlogCardProps {
   post: BlogPost;
 }
 
-export const BlogCard = ({ post }: BlogCardProps) => {
-  const formattedDate = new Date(post.date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long", 
-    day: "numeric"
-  });
+// Memoized component - prevents re-renders when parent updates
+export const BlogCard = memo(({ post }: BlogCardProps) => {
+  // Memoize expensive date formatting - only recalculate when post.date changes
+  const formattedDate = useMemo(() => {
+    return new Date(post.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  }, [post.date]);
 
   return (
     <Card className="h-full hover:shadow-card transition-all duration-300 hover:-translate-y-1">
@@ -51,4 +56,6 @@ export const BlogCard = ({ post }: BlogCardProps) => {
       </CardContent>
     </Card>
   );
-};
+});
+
+BlogCard.displayName = 'BlogCard';

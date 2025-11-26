@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => ({
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
           query: ['@tanstack/react-query'],
           icons: ['lucide-react'],
-          markdown: ['react-markdown', 'remark-gfm', 'gray-matter']
+          markdown: ['react-markdown', 'remark-gfm']
         }
       }
     },
