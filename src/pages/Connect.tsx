@@ -31,7 +31,11 @@ export default function Connect() {
 
   // Setup Turnstile callback
   useEffect(() => {
+    console.log('[Turnstile] Setting up callback');
+    console.log('[Turnstile] Site key:', import.meta.env.VITE_TURNSTILE_SITE_KEY);
+
     window.onTurnstileSuccess = (token: string) => {
+      console.log('[Turnstile] Token received:', token.substring(0, 20) + '...');
       setTurnstileToken(token);
     };
 
@@ -236,7 +240,7 @@ export default function Connect() {
                       data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                       data-callback="onTurnstileSuccess"
                       data-theme="auto"
-                    />
+                    ></div>
                   </div>
 
                   <Button
