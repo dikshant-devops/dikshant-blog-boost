@@ -6,14 +6,14 @@ import { Link } from "react-router-dom";
 
 const About = () => {
   const skills = [
-    "Docker", "Kubernetes", "AWS", "Azure", "CI/CD", "GitHub Actions", 
-    "Terraform", "Ansible", "Jenkins", "Linux", "Python", "Bash"
+    "Docker", "Kubernetes", "AWS", "Azure", "MongoDB", "GitHub Actions", 
+    "Terraform", "Postgres", "Jenkins", "Linux", "Python", "Bash", "GCP","Observability"
   ];
 
   const achievements = [
-    { number: "500+", label: "Students Taught" },
+    { number: "50+", label: "Students Taught" },
     { number: "50+", label: "Tutorials Created" },
-    { number: "3+", label: "Years Experience" },
+    { number: "6+", label: "Years Experience" },
     { number: "95%", label: "Student Success Rate" }
   ];
 
@@ -81,11 +81,11 @@ const About = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground">
-                With over 3 years of hands-on experience in DevOps and cloud technologies, 
+                With over 6 years of hands-on experience in DevOps and cloud technologies, 
                 I've worked with startups and enterprises to build scalable, reliable systems.
               </p>
               <p className="text-muted-foreground">
-                I hold certifications in AWS and Azure, and I'm passionate about staying 
+                I hold certifications in Kubernetes, and I'm passionate about staying 
                 current with the latest tools and best practices in the rapidly evolving 
                 DevOps landscape.
               </p>
