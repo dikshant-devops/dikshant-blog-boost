@@ -150,8 +150,14 @@ tags: ["Docker", "DevOps"]
 1. Create a new `.md` file in `/public/blog-posts/`
 2. Add frontmatter (optional)
 3. Write content in markdown
-4. Update `/public/blog-posts-manifest.json` with the filename
-5. Post automatically appears on `/blog` page (or wait for cache to expire)
+4. Add images (optional):
+   - Store images in `/public/images/blog/`
+   - Reference in markdown: `![Alt text](/images/blog/image-name.png)`
+   - Use descriptive filenames with hyphens: `docker-architecture.png`
+   - Supported formats: `.png`, `.jpg`, `.svg`, `.webp`
+   - Keep images under 500KB when possible
+5. Update `/public/blog-posts-manifest.json` with the filename
+6. Post automatically appears on `/blog` page (or wait for cache to expire)
 
 **Cache Management**:
 - Cache expires automatically after 5 minutes
@@ -274,8 +280,14 @@ npm run test:coverage     # Generate coverage report
 
 1. **Blog Post IDs**: Derived from markdown filename (without `.md` extension)
 2. **Tag Colors**: Defined in `src/config/tags.ts` - add new tags there for consistent styling
-3. **Images**: Store in `/public/` directory, reference with absolute paths
-4. **Newsletter**: Uses Beehiiv iframe embed on newsletter page
+3. **Images**:
+   - Store in `/public/images/blog/` directory
+   - Reference with absolute paths: `/images/blog/filename.png`
+   - Use descriptive, lowercase filenames with hyphens (e.g., `docker-architecture.png`)
+   - Supported formats: `.png` (screenshots, diagrams), `.jpg` (photos), `.svg` (icons), `.webp` (modern)
+   - Optimize images to keep under 500KB when possible
+   - Always include descriptive alt text for accessibility
+4. **Newsletter**: Uses Beehiiv API integration via serverless function
 5. **Admin Panel**: Located at `/admin` route (no authentication currently)
 
 ## Build Output
