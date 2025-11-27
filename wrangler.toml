@@ -8,6 +8,6 @@ pages_build_output_dir = "dist"
 functions = "functions"
 
 # Environment variables for production
-[env.production.vars]
-RATE_LIMIT_MAX_REQUESTS = "5"
-RATE_LIMIT_WINDOW_MS = "3600000"
+#[env.production.vars]
+#RATE_LIMIT_MAX_REQUESTS = "5"
+#RATE_LIMIT_WINDOW_MS = "3600000"
