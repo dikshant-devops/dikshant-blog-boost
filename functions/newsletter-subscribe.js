@@ -139,10 +139,14 @@ async function handleRequest(context) {
     // Other errors
     const errorData = await beehiivResponse.json().catch(() => ({}));
     console.error('[Newsletter] Error from Beehiiv:', errorData);
+    console.error('[Newsletter] Beehiiv status code:', beehiivResponse.status);
+
+    // Return detailed error message for debugging
+    const errorMessage = errorData.message || errorData.error || 'Failed to subscribe. Please try again later.';
 
     return errorResponse(
       beehiivResponse.status,
-      'Failed to subscribe. Please try again later.'
+      errorMessage
     );
 
   } catch (error) {

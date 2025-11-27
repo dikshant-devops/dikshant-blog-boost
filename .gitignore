@@ -18,6 +18,9 @@ dist-ssr
 .env.production
 .dev.vars
 
+# Wrangler (Cloudflare Workers)
+.wrangler
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
