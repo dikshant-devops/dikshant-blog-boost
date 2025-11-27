@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnstile Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { margin: 20px 0; padding: 10px; border-radius: 5px; }
+        .error { background: #fee; border: 1px solid #f88; }
+        .success { background: #efe; border: 1px solid #8f8; }
+        .info { background: #eef; border: 1px solid #88f; }
+    </style>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer
+            onload="scriptLoaded()"
+            onerror="scriptError()"></script>
+</head>
+<body>
+    <h1>Turnstile Widget Test</h1>
+
+    <div class="status info" id="script-status">
+        ⏳ Loading Turnstile script...
+    </div>
+
+    <p><strong>Site Key:</strong> <code>0x4AAAAAACDOs4z_C487MLjL</code></p>
+    <p><strong>Current Domain:</strong> <code id="domain"></code></p>
+
+    <hr>
+    <p>Widget should appear below:</p>
+
+    <div class="cf-turnstile"
+         data-sitekey="0x4AAAAAACDOs4z_C487MLjL"
+         data-callback="onSuccess"
+         data-error-callback="onError"></div>
+
+    <div class="status info" id="status">
+        Waiting for verification...
+    </div>
+
+    <hr>
+    <h3>Debug Information:</h3>
+    <pre id="debug"></pre>
+
+    <script>
+        // Show current domain
+        document.getElementById('domain').textContent = window.location.hostname;
+
+        let debugLog = [];
+        function log(message) {
+            console.log(message);
+            debugLog.push(new Date().toISOString() + ': ' + message);
+            document.getElementById('debug').textContent = debugLog.join('\n');
+        }
+
+        function scriptLoaded() {
+            log('✓ Turnstile script loaded successfully');
+            document.getElementById('script-status').className = 'status success';
+            document.getElementById('script-status').innerHTML = '✓ Turnstile script loaded';
+
+            // Check if turnstile API is available
+            if (window.turnstile) {
+                log('✓ window.turnstile API available');
+            } else {
+                log('✗ window.turnstile API NOT available');
+            }
+        }
+
+        function scriptError() {
+            log('✗ Failed to load Turnstile script from CDN');
+            document.getElementById('script-status').className = 'status error';
+            document.getElementById('script-status').innerHTML = '✗ Failed to load Turnstile script';
+        }
+
+        function onSuccess(token) {
+            log('✓ Token received: ' + token.substring(0, 50) + '...');
+            document.getElementById('status').className = 'status success';
+            document.getElementById('status').innerHTML = '<strong>✓ Verification successful!</strong><br>Token received (first 50 chars): ' + token.substring(0, 50) + '...';
+        }
+
+        function onError(errorCode) {
+            log('✗ Turnstile error: ' + errorCode);
+            document.getElementById('status').className = 'status error';
+            document.getElementById('status').innerHTML = '<strong>✗ Verification failed</strong><br>Error code: ' + errorCode;
+        }
+
+        // Check after 5 seconds if widget rendered
+        setTimeout(() => {
+            const widgetContainer = document.querySelector('.cf-turnstile');
+            if (widgetContainer && widgetContainer.children.length === 0) {
+                log('⚠ Widget container exists but has no children (widget did not render)');
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').innerHTML = '⚠ Widget did not render. Check:<br>1. Is your site key valid?<br>2. Is localhost allowed in Turnstile dashboard?<br>3. Any errors in browser console (F12)?';
+            }
+        }, 5000);
+
+        log('Page loaded, waiting for Turnstile...');
+    </script>
+</body>
+</html>
