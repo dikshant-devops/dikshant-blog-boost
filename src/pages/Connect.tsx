@@ -27,17 +27,79 @@ export default function Connect() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [widgetId, setWidgetId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Setup Turnstile callback
+  // Setup Turnstile with explicit rendering
   useEffect(() => {
-    window.onTurnstileSuccess = (token: string) => {
-      setTurnstileToken(token);
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    console.log('[Turnstile] Setting up callback');
+    console.log('[Turnstile] Site key:', siteKey);
+
+    if (!siteKey) {
+      console.error('[Turnstile] No site key found!');
+      return;
+    }
+
+    // Function to render the widget
+    const renderWidget = () => {
+      const container = document.getElementById('turnstile-widget');
+      if (!container) {
+        console.error('[Turnstile] Container element not found');
+        return;
+      }
+
+      if (!window.turnstile) {
+        console.log('[Turnstile] API not ready yet, will retry...');
+        return;
+      }
+
+      console.log('[Turnstile] Rendering widget...');
+
+      try {
+        const id = window.turnstile.render('#turnstile-widget', {
+          sitekey: siteKey,
+          callback: (token: string) => {
+            console.log('[Turnstile] Token received:', token.substring(0, 20) + '...');
+            setTurnstileToken(token);
+          },
+          'error-callback': (error: any) => {
+            console.error('[Turnstile] Error:', error);
+          },
+          theme: 'auto',
+        });
+
+        console.log('[Turnstile] Widget rendered with ID:', id);
+        setWidgetId(id);
+      } catch (error) {
+        console.error('[Turnstile] Failed to render widget:', error);
+      }
     };
 
-    return () => {
-      delete window.onTurnstileSuccess;
-    };
+    // Try to render immediately
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      // Wait for Turnstile API to load
+      console.log('[Turnstile] Waiting for API to load...');
+      const checkInterval = setInterval(() => {
+        if (window.turnstile) {
+          console.log('[Turnstile] API loaded');
+          clearInterval(checkInterval);
+          renderWidget();
+        }
+      }, 100);
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!window.turnstile) {
+          console.error('[Turnstile] API failed to load after 10 seconds');
+        }
+      }, 10000);
+
+      return () => clearInterval(checkInterval);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,10 +140,25 @@ export default function Connect() {
         })
       });
 
-      const result = await response.json();
-
+      // Check if response is ok first
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to send message');
+        // Try to get error message from response
+        let errorMessage = 'Failed to send message';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Parse successful response
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        throw new Error('Invalid response from server. Please try again.');
       }
 
       if (result.success) {
@@ -95,8 +172,9 @@ export default function Connect() {
         setTurnstileToken("");
 
         // Reset Turnstile widget
-        if (window.turnstile) {
-          window.turnstile.reset();
+        if (window.turnstile && widgetId) {
+          console.log('[Turnstile] Resetting widget');
+          window.turnstile.reset(widgetId);
         }
       }
     } catch (error) {
@@ -229,15 +307,24 @@ export default function Connect() {
                     />
                   </div>
 
+                  {/* Debug: Show if environment variable is loaded */}
+                  {!import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                    <div className="text-sm text-red-500 text-center">
+                      ⚠️ Turnstile site key not configured. Check your .env file.
+                    </div>
+                  )}
+
                   {/* Cloudflare Turnstile Widget */}
                   <div className="flex justify-center">
-                    <div
-                      className="cf-turnstile"
-                      data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                      data-callback="onTurnstileSuccess"
-                      data-theme="auto"
-                    />
+                    <div id="turnstile-widget"></div>
                   </div>
+
+                  {/* Debug: Show if token is received */}
+                  {import.meta.env.DEV && turnstileToken && (
+                    <div className="text-xs text-green-500 text-center">
+                      ✓ Security check passed
+                    </div>
+                  )}
 
                   <Button
                     type="submit"
