@@ -5,7 +5,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../.wrangler/tmp/bundle-SlU4ur/checked-fetch.js
+// ../.wrangler/tmp/bundle-wabtPa/checked-fetch.js
 var urls = /* @__PURE__ */ new Set();
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
@@ -4530,9 +4530,11 @@ async function handleRequest(context) {
     }
     const errorData = await beehiivResponse.json().catch(() => ({}));
     console.error("[Newsletter] Error from Beehiiv:", errorData);
+    console.error("[Newsletter] Beehiiv status code:", beehiivResponse.status);
+    const errorMessage = errorData.message || errorData.error || "Failed to subscribe. Please try again later.";
     return errorResponse(
       beehiivResponse.status,
-      "Failed to subscribe. Please try again later."
+      errorMessage
     );
   } catch (error) {
     console.error("[Newsletter] Unexpected error:", error);
@@ -5060,7 +5062,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-SlU4ur/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-wabtPa/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -5092,7 +5094,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-SlU4ur/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-wabtPa/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

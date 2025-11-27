@@ -4693,9 +4693,11 @@ async function handleRequest(context) {
     }
     const errorData = await beehiivResponse.json().catch(() => ({}));
     console.error("[Newsletter] Error from Beehiiv:", errorData);
+    console.error("[Newsletter] Beehiiv status code:", beehiivResponse.status);
+    const errorMessage = errorData.message || errorData.error || "Failed to subscribe. Please try again later.";
     return errorResponse(
       beehiivResponse.status,
-      "Failed to subscribe. Please try again later."
+      errorMessage
     );
   } catch (error) {
     console.error("[Newsletter] Unexpected error:", error);
