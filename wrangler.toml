@@ -1,5 +1,4 @@
 
-
 name = "techwithdikshant"
 compatibility_date = "2024-08-25"
 pages_build_output_dir = "dist"
@@ -7,3 +6,8 @@ pages_build_output_dir = "dist"
 [pages]
 # Enable functions directory for API endpoints
 functions = "functions"
+
+# Environment variables for production
+[env.production.vars]
+RATE_LIMIT_MAX_REQUESTS = "5"
+RATE_LIMIT_WINDOW_MS = "3600000"
