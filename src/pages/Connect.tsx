@@ -4,8 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Linkedin, Twitter, Github, Mail, MessageCircle, Calendar, ExternalLink } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+
+// Extend window interface for Turnstile
+declare global {
+  interface Window {
+    turnstile?: {
+      reset: () => void;
+      render: (element: string | HTMLElement, options: any) => void;
+    };
+    onTurnstileSuccess?: (token: string) => void;
+  }
+}
 
 export default function Connect() {
   const [formData, setFormData] = useState({
@@ -15,31 +26,89 @@ export default function Connect() {
     message: ""
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const { toast } = useToast();
+
+  // Setup Turnstile callback
+  useEffect(() => {
+    window.onTurnstileSuccess = (token: string) => {
+      setTurnstileToken(token);
+    };
+
+    return () => {
+      delete window.onTurnstileSuccess;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form fields
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate Turnstile token
+    if (!turnstileToken) {
+      toast({
+        title: "Verification required",
+        description: "Please complete the security check.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Store message in localStorage (you can replace with actual API)
-    const messages = JSON.parse(localStorage.getItem("contact_messages") || "[]");
-    messages.push({
-      ...formData,
-      timestamp: new Date().toISOString(),
-      id: Date.now()
-    });
-    localStorage.setItem("contact_messages", JSON.stringify(messages));
+    try {
+      // Send form data to API
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          turnstileToken
+        })
+      });
 
-    toast({
-      title: "Message sent successfully!",
-      description: "I'll get back to you as soon as possible.",
-    });
+      const result = await response.json();
 
-    setFormData({ name: "", email: "", subject: "", message: "" });
-    setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send message');
+      }
+
+      if (result.success) {
+        toast({
+          title: "Message sent successfully!",
+          description: "I'll get back to you as soon as possible.",
+        });
+
+        // Reset form
+        setFormData({ name: "", email: "", subject: "", message: "" });
+        setTurnstileToken("");
+
+        // Reset Turnstile widget
+        if (window.turnstile) {
+          window.turnstile.reset();
+        }
+      }
+    } catch (error) {
+      console.error('Contact form error:', error);
+      toast({
+        title: "Failed to send message",
+        description: error instanceof Error ? error.message : "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -159,10 +228,20 @@ export default function Connect() {
                       required
                     />
                   </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-primary hover:opacity-90" 
+
+                  {/* Cloudflare Turnstile Widget */}
+                  <div className="flex justify-center">
+                    <div
+                      className="cf-turnstile"
+                      data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      data-callback="onTurnstileSuccess"
+                      data-theme="auto"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-primary hover:opacity-90"
                     disabled={isLoading}
                   >
                     {isLoading ? "Sending..." : "Send Message"}

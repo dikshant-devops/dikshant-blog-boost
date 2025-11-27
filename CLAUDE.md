@@ -39,6 +39,18 @@ npm run lint
 
 # Preview production build
 npm run preview
+
+# Run tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage
+npm run test:coverage
 ```
 
 ## Project Structure
@@ -96,9 +108,25 @@ functions/               # Serverless functions
   - `icons`: Lucide React
   - `markdown`: react-markdown, remark-gfm
 
+### Data Fetching & Caching
+- **TanStack Query** configured with optimized defaults in `src/App.tsx`:
+  - `staleTime`: 5 minutes (blog content doesn't change frequently)
+  - `gcTime`: 10 minutes (garbage collection for unused data)
+  - `refetchOnWindowFocus`: false (prevents unnecessary refetches)
+  - `refetchOnReconnect`: false
+  - `retry`: 1 (retry failed requests once)
+- Combine with markdown loader's 5-minute cache for optimal performance
+- This dual-caching strategy (React Query + markdown cache) scales efficiently to 1000+ posts
+
 ### Content Management (Markdown-Based)
 
-Blog posts are stored as `.md` files in `/public/blog-posts/`. The system auto-discovers posts using Vite's `import.meta.glob()`.
+Blog posts are stored as `.md` files in `/public/blog-posts/`. The system uses a manifest-based discovery system with intelligent caching.
+
+**Post Discovery System**:
+- Primary: Reads `/blog-posts-manifest.json` for list of markdown files
+- Fallback: Uses hardcoded list if manifest not found (in `src/utils/markdownLoader.ts:39`)
+- Caching: 5-minute cache layer prevents redundant loads, scales to 1000+ posts
+- Individual posts: Smart filename resolution tries multiple variations (dashes, underscores, spaces)
 
 **Frontmatter format** (optional, auto-generated if missing):
 ```yaml
@@ -116,13 +144,18 @@ tags: ["Docker", "DevOps"]
 - Excerpt: First paragraph or first 150 characters
 - Date: Current date if not specified
 - Read Time: Calculated from word count (200 WPM)
-- Tags: Auto-detected from content and filename
+- Tags: Auto-detected from content and filename (checks against `src/config/tags.ts`)
 
 **Adding a new blog post**:
 1. Create a new `.md` file in `/public/blog-posts/`
 2. Add frontmatter (optional)
 3. Write content in markdown
-4. Post automatically appears on `/blog` page
+4. Update `/public/blog-posts-manifest.json` with the filename
+5. Post automatically appears on `/blog` page (or wait for cache to expire)
+
+**Cache Management**:
+- Cache expires automatically after 5 minutes
+- Manual cache clear: Call `clearPostsCache()` from `src/utils/markdownLoader.ts` (useful in admin panel or dev)
 
 ### SEO Implementation
 
@@ -203,6 +236,7 @@ The project supports multiple deployment targets:
 - All pages wrapped in `<Layout>` component
 - Use `useSEO` hook at top of component
 - Lazy-loaded via `React.lazy()` in App.tsx
+- **IMPORTANT**: When adding new routes in `src/App.tsx`, add them BEFORE the catch-all `*` route (which renders NotFound). The NotFound route must always be last.
 
 ### Custom Hooks
 - Prefix with `use` (React convention)
@@ -210,12 +244,31 @@ The project supports multiple deployment targets:
 
 ## Testing
 
-**Current Status**: No testing framework is currently configured.
+**Current Status**: Vitest configured with React Testing Library
 
-**Recommended Setup**:
-- Unit tests: Vitest (native Vite support)
-- Component tests: React Testing Library
-- E2E tests: Playwright or Cypress
+**Test Configuration**:
+- Test framework: Vitest with jsdom environment
+- Component testing: React Testing Library
+- Setup file: `src/test/setup.ts`
+- Coverage: v8 provider with text/json/html reporters
+
+**Existing Tests**:
+- `src/components/BlogCard.test.tsx` - BlogCard component tests
+- `src/pages/Blog.test.tsx` - Blog page tests
+- `src/utils/markdownLoader.test.ts` - Markdown parsing tests
+
+**Running Tests**:
+```bash
+npm run test              # Run all tests once
+npm run test:watch        # Watch mode (re-run on changes)
+npm run test:ui           # Run with Vitest UI
+npm run test:coverage     # Generate coverage report
+```
+
+**Writing New Tests**:
+- Place test files next to source files with `.test.ts` or `.test.tsx` extension
+- Use `@/` path alias for imports (matches src configuration)
+- Component tests should use React Testing Library utilities
 
 ## Known Conventions
 
