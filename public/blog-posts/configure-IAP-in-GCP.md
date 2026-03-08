@@ -1,22 +1,22 @@
 ---
-title: "Secure a Grafana Domain on GCP with IAP (gcloud CLI Only)"
-slug: "secure-grafana-domain-gcp-iap-gcloud"
-description: "A practical guide to running Grafana on a private GCE VM behind HTTPS Load Balancer, Cloud Armor, and Identity-Aware Proxy using gcloud commands."
+title: "Secure an NGINX Login Website on GCP with IAP"
+slug: "secure-nginx-login-domain-gcp-iap-gcloud"
+description: "A practical guide to running a private VM-based NGINX login website behind HTTPS Load Balancer, Cloud Armor, and Identity-Aware Proxy using gcloud commands."
 author: "Dikshant Platform Team"
-tags: ["gcp", "iap", "grafana", "cloud-armor", "load-balancer", "security", "gcloud"]
+tags: ["gcp", "iap", "nginx", "cloud-armor", "load-balancer", "security", "gcloud"]
 ---
 
-# Secure a Grafana Domain on GCP with IAP (gcloud CLI Only)
+# Secure an NGINX Login Website on GCP with IAP (gcloud CLI Only)
 
-If your goal is to expose Grafana on a custom domain while keeping access restricted to your organization, Google Cloud Identity-Aware Proxy (IAP) is a strong pattern.
+If your goal is to expose a simple login website but block direct public access, Google Cloud Identity-Aware Proxy (IAP) is a reliable pattern.
 
-In this guide, we secure `grafana.testwithdikshant.com` with:
+In this guide, we secure `login.techwithdikshant.com` with:
 
-1. A private GCE VM running Grafana + NGINX
+1. A private GCE VM running NGINX
 2. Zonal NEG backend
 3. HTTPS Load Balancer
 4. Cloud Armor policy
-5. IAP access restricted to `testwithdikshant.com`
+5. IAP access restricted to `techwithdikshant.com`
 
 All steps are shown with `gcloud` commands only.
 
@@ -26,14 +26,13 @@ All steps are shown with `gcloud` commands only.
 
 ```mermaid
 flowchart LR
-  U["User"] --> DNS["DNS: grafana.testwithdikshant.com"]
+  U["User"] --> DNS["DNS: login.techwithdikshant.com"]
   DNS --> LB["External HTTPS Load Balancer"]
-  LB --> IAP["IAP AuthZ/AuthN"]
+  LB --> IAP["IAP AuthN/AuthZ"]
   IAP --> BE["Backend Service"]
   BE --> NEG["Zonal NEG (GCE_VM_IP_PORT)"]
   NEG --> VM["GCE VM (private)"]
   VM --> NGINX["NGINX :8080"]
-  NGINX --> GF["Grafana :3000"]
 ```
 
 ---
@@ -42,9 +41,9 @@ flowchart LR
 
 1. Project: `dikshant`
 2. VPC/Subnet: `dikshant-dev-network` / `dikshant-dev-subnet`
-3. Existing ALB for `app-dev.testwithdikshant.com` (`dikshant-alb`)
-4. DNS control for `testwithdikshant.com`
-5. OAuth client ID/secret for IAP/Grafana Google auth
+3. DNS control for `techwithdikshant.com`
+4. APIs enabled: Compute, IAP, DNS
+5. Permission to update IAM/IAP policy
 
 Set project:
 
@@ -63,41 +62,94 @@ gcloud services enable \
 
 ---
 
-## Step 1: Create a Private VM for Grafana
+## Step 1: Create a Private VM with NGINX Login Page
 
-This VM has no external IP and is tagged for restricted ingress.
+This VM has no external IP and serves a static login page through NGINX on port `8080`.
 
 ```bash
-gcloud compute instances create grafana-dev \
+gcloud compute instances create login-dev \
   --zone=us-central1-a \
-  --machine-type=e2-standard-2 \
+  --machine-type=e2-medium \
   --network=dikshant-dev-network \
   --subnet=dikshant-dev-subnet \
   --no-address \
-  --tags=internal-only,grafana-dev-backend \
+  --tags=internal-only,login-dev-backend \
   --service-account=YOUR_COMPUTE_SA_EMAIL \
   --scopes=https://www.googleapis.com/auth/cloud-platform \
   --image-family=ubuntu-2204-lts \
   --image-project=ubuntu-os-cloud \
-  --boot-disk-size=50GB \
+  --boot-disk-size=20GB \
   --boot-disk-type=pd-balanced \
   --metadata=startup-script='#!/bin/bash
 set -euxo pipefail
 apt-get update
-apt-get install -y docker.io docker-compose-plugin
-systemctl enable --now docker
-usermod -aG docker ubuntu || true
+apt-get install -y nginx
+
+cat > /var/www/html/index.html <<EOF
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; background: #f5f7fb; }
+      .wrap { max-width: 420px; margin: 64px auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; }
+      h1 { margin: 0 0 16px; font-size: 24px; }
+      input { width: 100%; padding: 10px; margin: 8px 0 14px; border: 1px solid #d1d5db; border-radius: 8px; }
+      button { width: 100%; padding: 10px; border: 0; border-radius: 8px; background: #111827; color: #fff; }
+      .muted { color: #6b7280; font-size: 12px; margin-top: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Login</h1>
+      <form>
+        <label>Email</label>
+        <input type="email" placeholder="you@techwithdikshant.com" />
+        <label>Password</label>
+        <input type="password" placeholder="********" />
+        <button type="button">Sign in</button>
+      </form>
+      <p class="muted">This page is protected by Google IAP.</p>
+    </div>
+  </body>
+</html>
+EOF
+
+cat > /etc/nginx/sites-available/login-site <<EOF
+server {
+  listen 8080 default_server;
+  server_name _;
+
+  location = /healthz {
+    add_header Content-Type text/plain;
+    return 200 "ok";
+  }
+
+  location / {
+    root /var/www/html;
+    index index.html;
+    try_files \$uri \$uri/ /index.html;
+  }
+}
+EOF
+
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/login-site /etc/nginx/sites-enabled/login-site
+nginx -t
+systemctl enable --now nginx
 '
 ```
 
 ---
 
-## Step 2: Add Firewall Rules for the VM Backend Port
+## Step 2: Configure Firewall for LB to VM Traffic
 
-Allow only Google LB/health-check ranges to NGINX port `8080`:
+Allow only Google LB/health check IP ranges to backend port `8080`:
 
 ```bash
-gcloud compute firewall-rules create allow-grafana-dev-lb-healthcheck \
+gcloud compute firewall-rules create allow-login-dev-lb-healthcheck \
   --project=dikshant \
   --network=dikshant-dev-network \
   --direction=INGRESS \
@@ -105,13 +157,13 @@ gcloud compute firewall-rules create allow-grafana-dev-lb-healthcheck \
   --action=ALLOW \
   --rules=tcp:8080 \
   --source-ranges=35.191.0.0/16,130.211.0.0/22 \
-  --target-tags=grafana-dev-backend
+  --target-tags=login-dev-backend
 ```
 
-Optional but recommended explicit deny for public `8080`:
+Explicit public deny on `8080` for safety:
 
 ```bash
-gcloud compute firewall-rules create deny-grafana-dev-public-8080 \
+gcloud compute firewall-rules create deny-login-dev-public-8080 \
   --project=dikshant \
   --network=dikshant-dev-network \
   --direction=INGRESS \
@@ -119,37 +171,15 @@ gcloud compute firewall-rules create deny-grafana-dev-public-8080 \
   --action=DENY \
   --rules=tcp:8080 \
   --source-ranges=0.0.0.0/0 \
-  --target-tags=grafana-dev-backend
+  --target-tags=login-dev-backend
 ```
 
 ---
 
-## Step 3: Run Grafana + NGINX with Docker Compose
-
-SSH into VM using your standard private/IAP method and deploy your stack.
-
-Quick health verification from VM:
+## Step 3: Create Health Check + Zonal NEG + Endpoint
 
 ```bash
-curl -i http://127.0.0.1:8080/healthz
-curl -I http://127.0.0.1:8080/login
-```
-
-Note:
-
-1. Keep Grafana on internal port `3000`
-2. Keep NGINX listening on `8080`
-3. Configure `root_url` as `https://grafana.testwithdikshant.com`
-4. Use secrets injection for OAuth secret, do not hardcode in image
-
----
-
-## Step 4: Create Health Check + Zonal NEG + Endpoint
-
-Create backend health check:
-
-```bash
-gcloud compute health-checks create http grafana-dev-hc \
+gcloud compute health-checks create http login-dev-hc \
   --global \
   --port=8080 \
   --request-path=/healthz \
@@ -159,10 +189,8 @@ gcloud compute health-checks create http grafana-dev-hc \
   --unhealthy-threshold=3
 ```
 
-Create zonal NEG of type `GCE_VM_IP_PORT`:
-
 ```bash
-gcloud compute network-endpoint-groups create grafana-dev-neg \
+gcloud compute network-endpoint-groups create login-dev-neg \
   --zone=us-central1-a \
   --network-endpoint-type=gce-vm-ip-port \
   --network=dikshant-dev-network \
@@ -170,36 +198,30 @@ gcloud compute network-endpoint-groups create grafana-dev-neg \
   --default-port=8080
 ```
 
-Attach VM endpoint:
-
 ```bash
-gcloud compute network-endpoint-groups update grafana-dev-neg \
+gcloud compute network-endpoint-groups update login-dev-neg \
   --zone=us-central1-a \
-  --add-endpoint="instance=grafana-dev,ip=$(gcloud compute instances describe grafana-dev --zone=us-central1-a --format='value(networkInterfaces[0].networkIP)'),port=8080"
+  --add-endpoint="instance=login-dev,ip=$(gcloud compute instances describe login-dev --zone=us-central1-a --format='value(networkInterfaces[0].networkIP)'),port=8080"
 ```
 
 ---
 
-## Step 5: Create Backend Service and Attach NEG
-
-Create backend service:
+## Step 4: Create Backend Service and Attach NEG
 
 ```bash
-gcloud compute backend-services create grafana-dev \
+gcloud compute backend-services create login-dev \
   --global \
   --load-balancing-scheme=EXTERNAL_MANAGED \
   --protocol=HTTP \
   --port-name=http \
   --timeout=30s \
-  --health-checks=grafana-dev-hc
+  --health-checks=login-dev-hc
 ```
 
-Attach NEG to backend service:
-
 ```bash
-gcloud compute backend-services add-backend grafana-dev \
+gcloud compute backend-services add-backend login-dev \
   --global \
-  --network-endpoint-group=grafana-dev-neg \
+  --network-endpoint-group=login-dev-neg \
   --network-endpoint-group-zone=us-central1-a \
   --balancing-mode=RATE \
   --max-rate=1000 \
@@ -208,57 +230,67 @@ gcloud compute backend-services add-backend grafana-dev \
 
 ---
 
-## Step 6: Create and Attach a Dedicated Cloud Armor Policy
+## Step 5: Create and Attach Cloud Armor Policy
 
 Create policy:
 
 ```bash
-gcloud compute security-policies create grafana-dev-cloud-armor-policy \
-  --description="Dedicated policy for grafana.testwithdikshant.com"
+gcloud compute security-policies create login-dev-cloud-armor-policy \
+  --description="Policy for login.techwithdikshant.com"
 ```
 
-Block common SQLi:
+Deny non-target host header traffic:
 
 ```bash
-gcloud compute security-policies rules create 800 \
-  --security-policy=grafana-dev-cloud-armor-policy \
+gcloud compute security-policies rules create 650 \
+  --security-policy=login-dev-cloud-armor-policy \
   --action=deny-403 \
-  --expression="request.headers['host']=='grafana.testwithdikshant.com' && evaluatePreconfiguredWaf('sqli-stable')" \
-  --description="Block SQLi"
+  --expression="request.headers['host'] != 'login.techwithdikshant.com' && request.headers['host'] != 'login.techwithdikshant.com:443'" \
+  --description="Deny non-login host headers"
 ```
 
-Block common XSS:
+Allow IAP callback:
 
 ```bash
-gcloud compute security-policies rules create 810 \
-  --security-policy=grafana-dev-cloud-armor-policy \
-  --action=deny-403 \
-  --expression="request.headers['host']=='grafana.testwithdikshant.com' && evaluatePreconfiguredWaf('xss-stable')" \
-  --description="Block XSS"
+gcloud compute security-policies rules create 700 \
+  --security-policy=login-dev-cloud-armor-policy \
+  --action=allow \
+  --expression="request.headers['host'] == 'login.techwithdikshant.com' && request.query.contains('gcp-iap-mode=AUTHENTICATING')" \
+  --description="Allow IAP callback flow"
 ```
 
-Rate limit login endpoints:
+Throttle login traffic:
 
 ```bash
 gcloud compute security-policies rules create 900 \
-  --security-policy=grafana-dev-cloud-armor-policy \
+  --security-policy=login-dev-cloud-armor-policy \
   --action=throttle \
-  --expression="request.headers['host']=='grafana.testwithdikshant.com' && (request.path.startsWith('/login') || request.path.startsWith('/api/login'))" \
+  --expression="request.headers['host'] == 'login.techwithdikshant.com' && request.path.startsWith('/login')" \
   --rate-limit-threshold-count=30 \
   --rate-limit-threshold-interval-sec=60 \
   --conform-action=allow \
   --exceed-action=deny-429 \
   --enforce-on-key=IP \
-  --description="Throttle login endpoints"
+  --description="Throttle login endpoint"
+```
+
+Deny non-website paths:
+
+```bash
+gcloud compute security-policies rules create 950 \
+  --security-policy=login-dev-cloud-armor-policy \
+  --action=deny-403 \
+  --expression="request.headers['host'].matches('^login\\.techwithdikshant\\.com$|^login\\.techwithdikshant\\.com:443$') && !request.path.matches('^/$|^/login$|^/logout$|^/favicon\\.ico$|^/public/.*$')" \
+  --description="Deny non-login website paths"
 ```
 
 Baseline rate limit:
 
 ```bash
 gcloud compute security-policies rules create 1000 \
-  --security-policy=grafana-dev-cloud-armor-policy \
+  --security-policy=login-dev-cloud-armor-policy \
   --action=throttle \
-  --expression="request.headers['host']=='grafana.testwithdikshant.com'" \
+  --expression="request.headers['host'] == 'login.techwithdikshant.com'" \
   --rate-limit-threshold-count=300 \
   --rate-limit-threshold-interval-sec=60 \
   --conform-action=allow \
@@ -267,95 +299,105 @@ gcloud compute security-policies rules create 1000 \
   --description="Baseline rate limit"
 ```
 
-Attach policy to backend:
+Attach policy:
 
 ```bash
-gcloud compute backend-services update grafana-dev \
+gcloud compute backend-services update login-dev \
   --global \
-  --security-policy=grafana-dev-cloud-armor-policy
+  --security-policy=login-dev-cloud-armor-policy
 ```
 
 ---
 
-## Step 7: Reuse Existing ALB for `grafana.testwithdikshant.com`
+## Step 6: Create Dedicated HTTPS Load Balancer
 
-Create managed certificate for Grafana host:
+Reserve global IP:
 
 ```bash
-gcloud compute ssl-certificates create dikshant-alb-certificate-grafana \
+gcloud compute addresses create login-dev-alb-ip \
   --global \
-  --domains=grafana.testwithdikshant.com
+  --ip-version=IPV4
 ```
 
-Update existing HTTPS target proxy to include both certs:
+Create managed cert:
 
 ```bash
-gcloud compute target-https-proxies update dikshant-alb-target-proxy \
+gcloud compute ssl-certificates create login-dev-alb-certificate \
   --global \
-  --ssl-certificates=dikshant-alb-certificate,dikshant-alb-certificate-grafana
+  --domains=login.techwithdikshant.com
 ```
 
-Add host rule/path matcher to existing URL map:
+Create URL map:
 
 ```bash
-gcloud compute url-maps add-path-matcher dikshant-alb \
+gcloud compute url-maps create login-dev-alb \
   --global \
-  --path-matcher-name=path-matcher-grafana-dev \
-  --default-service=grafana-dev \
-  --new-hosts=grafana.testwithdikshant.com
+  --default-service=login-dev
+```
+
+Create HTTPS proxy:
+
+```bash
+gcloud compute target-https-proxies create login-dev-alb-target-proxy \
+  --global \
+  --url-map=login-dev-alb \
+  --ssl-certificates=login-dev-alb-certificate
+```
+
+Create forwarding rule:
+
+```bash
+gcloud compute forwarding-rules create login-dev-alb-fe \
+  --global \
+  --load-balancing-scheme=EXTERNAL_MANAGED \
+  --target-https-proxy=login-dev-alb-target-proxy \
+  --address=login-dev-alb-ip \
+  --ports=443
 ```
 
 ---
 
-## Step 8: Enable IAP and Restrict Access to `testwithdikshant.com`
+## Step 7: Enable IAP and Restrict Access to Domain
 
-Enable IAP on backend service:
-
-```bash
-gcloud compute backend-services update grafana-dev \
-  --global \
-  --iap=enabled,oauth2-client-id=YOUR_OAUTH_CLIENT_ID,oauth2-client-secret=YOUR_OAUTH_CLIENT_SECRET
-```
-
-Fetch backend numeric ID:
+Enable IAP:
 
 ```bash
-gcloud compute backend-services describe grafana-dev \
+gcloud compute backend-services update login-dev \
   --global \
-  --format='value(id)'
+  --iap=enabled
 ```
 
-Grant IAP access to your Workspace domain:
+Grant domain access:
 
 ```bash
 gcloud iap web add-iam-policy-binding \
   --resource-type=backend-services \
-  --service="$(gcloud compute backend-services describe grafana-dev --global --format='value(id)')" \
-  --member='domain:testwithdikshant.com' \
+  --service=login-dev \
+  --member='domain:techwithdikshant.com' \
   --role='roles/iap.httpsResourceAccessor'
 ```
 
 ---
 
-## Step 9: DNS and Validation
+## Step 8: DNS and Validation
 
-Get ALB frontend IP:
+Get frontend IP:
 
 ```bash
-gcloud compute forwarding-rules describe dikshant-alb-fe \
+gcloud compute forwarding-rules describe login-dev-alb-fe \
   --global \
   --project=dikshant \
   --format='value(IPAddress)'
 ```
 
-Point DNS A record:
+Create DNS A record:
 
-1. `grafana.testwithdikshant.com -> <ALB_IP>`
+1. `login.techwithdikshant.com -> <ALB_IP>`
 
-Check backend health:
+Check health:
 
 ```bash
-gcloud compute backend-services get-health grafana-dev --global
+gcloud compute backend-services get-health login-dev --global
 ```
 
 Check IAP policy:
@@ -363,40 +405,38 @@ Check IAP policy:
 ```bash
 gcloud iap web get-iam-policy \
   --resource-type=backend-services \
-  --service="$(gcloud compute backend-services describe grafana-dev --global --format='value(id)')"
+  --service=login-dev
 ```
 
-Open in browser:
+Open:
 
-1. `https://grafana.testwithdikshant.com`
+1. `https://login.techwithdikshant.com`
 
-Expected behavior:
+Expected:
 
-1. IAP prompts for Google authentication/authorization first
-2. Only users from `testwithdikshant.com` are allowed
-3. Grafana OAuth then handles app-level session
+1. IAP challenge appears first
+2. Only `techwithdikshant.com` users can continue
+3. NGINX login page renders after successful IAP authorization
 
 ---
 
 ## Common Pitfalls
 
-1. Hardcoding OAuth secrets in `grafana.ini` or Docker image
-2. Leaving VM backend publicly reachable
-3. Wrong `root_url` in Grafana (must match external domain)
-4. Missing host rule/path matcher in URL map
-5. Certificate not yet `ACTIVE` at time of test
+1. DNS points to wrong forwarding rule IP
+2. Certificate is not `ACTIVE` yet
+3. Health check path does not return `200`
+4. Forgetting to bind `roles/iap.httpsResourceAccessor`
+5. Overly broad Cloud Armor expressions that block valid requests
 
 ---
 
 ## Final Takeaway
 
-For internal observability endpoints, this pattern is robust:
+This pattern gives a clean internet-facing entry point with strong identity control:
 
 1. Private VM backend
-2. External HTTPS LB
-3. Cloud Armor
-4. IAP domain-restricted access
-5. Grafana Google OAuth for app-level auth
+2. HTTPS LB
+3. Cloud Armor filtering
+4. IAP domain restriction
 
-It gives a clean identity boundary without VPN-style broad network exposure.
-
+Users can reach the website only after IAP authorization, without opening broad VPN-style network access.
