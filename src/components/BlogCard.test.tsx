@@ -54,10 +54,19 @@ describe('BlogCard', () => {
     expect(link).toHaveAttribute('href', '/blog/test-post');
   });
 
-  it('should render with hover effects', () => {
+  it('entire card is wrapped in a link (fully clickable)', () => {
     renderWithRouter(<BlogCard post={mockPost} />);
-    const card = screen.getByText('Test Blog Post Title').closest('.group');
-    expect(card).toBeInTheDocument();
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/blog/test-post');
+    // The link wraps the entire card including excerpt and tags
+    expect(link).toHaveTextContent('This is a test excerpt for the blog post');
+    expect(link).toHaveTextContent('Docker');
+  });
+
+  it('link has aria-label for accessibility', () => {
+    renderWithRouter(<BlogCard post={mockPost} />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('aria-label', 'Test Blog Post Title');
   });
 
   it('should handle posts with single tag', () => {

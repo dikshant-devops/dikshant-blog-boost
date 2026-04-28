@@ -52,8 +52,9 @@ describe('Blog Page', () => {
 
   it('should display loading skeleton initially', () => {
     renderWithRouter(<Blog />);
-    // Skeleton components should be rendered
-    expect(screen.getAllByRole('img', { hidden: true }).length).toBeGreaterThan(0);
+    // Skeleton components use animate-pulse class
+    const skeletons = document.querySelectorAll('.animate-pulse');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('should load and display all blog posts', async () => {
@@ -165,8 +166,9 @@ describe('Blog Page', () => {
   it('should display page title and description', () => {
     renderWithRouter(<Blog />);
 
-    expect(screen.getByText(/DevOps/)).toBeInTheDocument();
-    expect(screen.getByText(/Blog/)).toBeInTheDocument();
+    // Use getAllByText since "DevOps" and "Blog" appear in multiple places (title + tags)
+    expect(screen.getAllByText(/DevOps/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Blog/).length).toBeGreaterThan(0);
   });
 
   it('should use memoized handlers (performance optimization)', async () => {

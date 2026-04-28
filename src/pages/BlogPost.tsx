@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import { type BlogPost } from "@/types/blog";
 import { loadMarkdownPost, loadMarkdownPosts } from "@/utils/markdownLoader";
@@ -41,6 +42,19 @@ const BlogPost = () => {
     readTime: post?.readTime || '5 min'
   });
   
+  // Memoize related posts by tag relevance
+  const relatedPosts = useMemo(() => {
+    if (!post || allPosts.length === 0) return [];
+    const others = allPosts.filter(p => p.id !== post.id);
+    // Score by number of shared tags
+    const scored = others.map(p => ({
+      post: p,
+      shared: p.tags.filter(t => post.tags.includes(t)).length,
+    }));
+    scored.sort((a, b) => b.shared - a.shared || new Date(b.post.date).getTime() - new Date(a.post.date).getTime());
+    return scored.slice(0, 2).map(s => s.post);
+  }, [post, allPosts]);
+
   // Memoize expensive date formatting - MUST be before early returns (Rules of Hooks)
   const formattedDate = useMemo(() => {
     if (!post) return '';
@@ -100,6 +114,14 @@ const BlogPost = () => {
         {children}
       </a>
     ),
+    img: ({ src, alt }: any) => (
+      <img
+        src={src}
+        alt={alt || ''}
+        loading="lazy"
+        className="rounded-lg max-w-full h-auto my-4"
+      />
+    ),
   }), []);
 
   useEffect(() => {
@@ -126,9 +148,29 @@ const BlogPost = () => {
   // Early returns AFTER all hooks
   if (loading) {
     return (
-      <div className="container mx-auto py-12 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-lg text-muted-foreground">Loading blog post...</p>
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <Skeleton className="h-9 w-32 mb-6" />
+        <div className="mb-8 space-y-4">
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-20" />
+          </div>
+          <Skeleton className="h-10 w-3/4" />
+          <Skeleton className="h-10 w-1/2" />
+          <div className="flex gap-6">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-32 w-full rounded-lg" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
         </div>
       </div>
     );
@@ -196,10 +238,7 @@ const BlogPost = () => {
         <div className="mt-12 pt-8 border-t">
           <h3 className="text-2xl font-semibold mb-6">More Articles</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allPosts
-              .filter(p => p.id !== post.id)
-              .slice(0, 2)
-              .map((relatedPost) => (
+            {relatedPosts.map((relatedPost) => (
                 <Link
                   key={relatedPost.id}
                   to={`/blog/${relatedPost.id}`}

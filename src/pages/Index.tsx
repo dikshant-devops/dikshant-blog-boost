@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { BlogCard } from "@/components/BlogCard";
-import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { BlogCardSkeleton } from "@/components/BlogCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useState, useEffect } from "react";
@@ -9,6 +9,7 @@ import { useSEO } from "@/hooks/useSEO";
 
 const Index = () => {
   const [featuredPosts, setFeaturedPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // SEO optimization for the homepage
   useSEO({
@@ -20,8 +21,12 @@ const Index = () => {
 
   useEffect(() => {
     const loadPosts = async () => {
-      const posts = await loadMarkdownPosts();
-      setFeaturedPosts(posts.slice(0, 3));
+      try {
+        const posts = await loadMarkdownPosts();
+        setFeaturedPosts(posts.slice(0, 3));
+      } finally {
+        setLoading(false);
+      }
     };
     loadPosts();
   }, []);
@@ -111,9 +116,17 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {featuredPosts.map((post) => (
-              <BlogCard key={post.id} post={post} />
-            ))}
+            {loading ? (
+              <>
+                <BlogCardSkeleton />
+                <BlogCardSkeleton />
+                <BlogCardSkeleton />
+              </>
+            ) : (
+              featuredPosts.map((post) => (
+                <BlogCard key={post.id} post={post} />
+              ))
+            )}
           </div>
           
           <div className="text-center">

@@ -1,44 +1,36 @@
+const ALLOWED_ORIGINS = ['https://techwithdikshant.com', 'http://localhost:8080'];
+
+function getCorsOrigin(request) {
+  const origin = request.headers.get('Origin') || '';
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+function corsHeaders(request) {
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': getCorsOrigin(request),
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
 // Helper function for email validation
 function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-// Helper function for error responses
-function errorResponse(status, message) {
+function errorResponse(status, message, request) {
   return new Response(
-    JSON.stringify({
-      success: false,
-      error: message
-    }),
-    {
-      status,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    }
+    JSON.stringify({ success: false, error: message }),
+    { status, headers: corsHeaders(request) }
   );
 }
 
-// Helper function for success responses
-function successResponse(message) {
+function successResponse(message, request) {
   return new Response(
-    JSON.stringify({
-      success: true,
-      message
-    }),
-    {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    }
+    JSON.stringify({ success: true, message }),
+    { status: 200, headers: corsHeaders(request) }
   );
 }
 
@@ -47,16 +39,10 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestOptions(context) {
-  return handleCORS();
-}
-
-function handleCORS() {
   return new Response(null, {
-    status: 200,
+    status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      ...corsHeaders(context.request),
       'Access-Control-Max-Age': '86400',
     },
   });
@@ -66,31 +52,21 @@ async function handleRequest(context) {
   const { request, env } = context;
 
   try {
-    console.log('[Newsletter] Processing subscription request');
-
-    // Parse request body
     const { email } = await request.json();
-    console.log('[Newsletter] Email received:', email);
 
-    // Validate email
     if (!email) {
-      console.log('[Newsletter] Error: No email provided');
-      return errorResponse(400, 'Email is required');
+      return errorResponse(400, 'Email is required', request);
     }
 
     if (!isValidEmail(email)) {
-      console.log('[Newsletter] Error: Invalid email format');
-      return errorResponse(400, 'Invalid email format');
+      return errorResponse(400, 'Invalid email format', request);
     }
 
-    // Check environment variables
     if (!env.BEEHIIV_API_KEY || !env.BEEHIIV_PUBLICATION_ID) {
-      console.error('[Newsletter] Error: Missing Beehiiv credentials');
-      return errorResponse(500, 'Server configuration error');
+      console.error('[Newsletter] Missing Beehiiv credentials');
+      return errorResponse(500, 'Server configuration error', request);
     }
 
-    // Call Beehiiv API
-    console.log('[Newsletter] Calling Beehiiv API...');
     const beehiivResponse = await fetch(
       `https://api.beehiiv.com/v2/publications/${env.BEEHIIV_PUBLICATION_ID}/subscriptions`,
       {
@@ -110,47 +86,30 @@ async function handleRequest(context) {
       }
     );
 
-    console.log('[Newsletter] Beehiiv response status:', beehiivResponse.status);
-
-    // Success - new subscription
     if (beehiivResponse.status === 201) {
-      console.log('[Newsletter] Success: New subscription created');
-      return successResponse('Successfully subscribed to newsletter! Check your email to confirm.');
+      return successResponse('Successfully subscribed to newsletter! Check your email to confirm.', request);
     }
 
-    // Duplicate subscription - treat as success
     if (beehiivResponse.status === 409) {
-      console.log('[Newsletter] Info: Email already subscribed');
-      return successResponse('You are already subscribed to our newsletter!');
+      return successResponse('You are already subscribed to our newsletter!', request);
     }
 
-    // Unauthorized - API key issue
     if (beehiivResponse.status === 401) {
-      console.error('[Newsletter] Error: Unauthorized - check API key');
-      return errorResponse(500, 'Server authentication error');
+      console.error('[Newsletter] Unauthorized - check API key');
+      return errorResponse(500, 'Server authentication error', request);
     }
 
-    // Rate limited
     if (beehiivResponse.status === 429) {
-      console.error('[Newsletter] Error: Rate limited');
-      return errorResponse(429, 'Too many requests. Please try again later.');
+      return errorResponse(429, 'Too many requests. Please try again later.', request);
     }
 
-    // Other errors
     const errorData = await beehiivResponse.json().catch(() => ({}));
-    console.error('[Newsletter] Error from Beehiiv:', errorData);
-    console.error('[Newsletter] Beehiiv status code:', beehiivResponse.status);
-
-    // Return detailed error message for debugging
+    console.error('[Newsletter] Beehiiv error:', beehiivResponse.status, errorData);
     const errorMessage = errorData.message || errorData.error || 'Failed to subscribe. Please try again later.';
-
-    return errorResponse(
-      beehiivResponse.status,
-      errorMessage
-    );
+    return errorResponse(beehiivResponse.status, errorMessage, request);
 
   } catch (error) {
     console.error('[Newsletter] Unexpected error:', error);
-    return errorResponse(500, 'An unexpected error occurred. Please try again.');
+    return errorResponse(500, 'An unexpected error occurred. Please try again.', request);
   }
 }

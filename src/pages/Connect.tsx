@@ -33,72 +33,46 @@ export default function Connect() {
   // Setup Turnstile with explicit rendering
   useEffect(() => {
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
-    console.log('[Turnstile] Setting up callback');
-    console.log('[Turnstile] Site key:', siteKey);
 
-    if (!siteKey) {
-      console.error('[Turnstile] No site key found!');
-      return;
-    }
+    if (!siteKey) return;
 
-    // Function to render the widget
     const renderWidget = () => {
       const container = document.getElementById('turnstile-widget');
-      if (!container) {
-        console.error('[Turnstile] Container element not found');
-        return;
-      }
-
-      if (!window.turnstile) {
-        console.log('[Turnstile] API not ready yet, will retry...');
-        return;
-      }
-
-      console.log('[Turnstile] Rendering widget...');
+      if (!container || !window.turnstile) return;
 
       try {
         const id = window.turnstile.render('#turnstile-widget', {
           sitekey: siteKey,
           callback: (token: string) => {
-            console.log('[Turnstile] Token received:', token.substring(0, 20) + '...');
             setTurnstileToken(token);
           },
-          'error-callback': (error: any) => {
-            console.error('[Turnstile] Error:', error);
-          },
+          'error-callback': () => {},
           theme: 'auto',
         });
-
-        console.log('[Turnstile] Widget rendered with ID:', id);
         setWidgetId(id);
       } catch (error) {
         console.error('[Turnstile] Failed to render widget:', error);
       }
     };
 
-    // Try to render immediately
     if (window.turnstile) {
       renderWidget();
     } else {
-      // Wait for Turnstile API to load
-      console.log('[Turnstile] Waiting for API to load...');
       const checkInterval = setInterval(() => {
         if (window.turnstile) {
-          console.log('[Turnstile] API loaded');
           clearInterval(checkInterval);
           renderWidget();
         }
       }, 100);
 
-      // Timeout after 10 seconds
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         clearInterval(checkInterval);
-        if (!window.turnstile) {
-          console.error('[Turnstile] API failed to load after 10 seconds');
-        }
       }, 10000);
 
-      return () => clearInterval(checkInterval);
+      return () => {
+        clearInterval(checkInterval);
+        clearTimeout(timeout);
+      };
     }
   }, []);
 
@@ -173,7 +147,6 @@ export default function Connect() {
 
         // Reset Turnstile widget
         if (window.turnstile && widgetId) {
-          console.log('[Turnstile] Resetting widget');
           window.turnstile.reset(widgetId);
         }
       }

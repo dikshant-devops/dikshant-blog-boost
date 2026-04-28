@@ -26,10 +26,28 @@ describe('markdownLoader', () => {
     // Clear any mocks
     vi.clearAllMocks();
 
-    // Mock successful fetch
-    (global.fetch as any).mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(mockMarkdownContent)
+    // Mock fetch to return content for known files, 404 for unknown
+    (global.fetch as any).mockImplementation((url: string) => {
+      // Manifest request
+      if (url.includes('manifest')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(['test-blog-post.md']),
+        });
+      }
+      // Known blog post files
+      if (url.includes('test-blog-post.md')) {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(mockMarkdownContent),
+        });
+      }
+      // Unknown files return 404
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve('Not Found'),
+      });
     });
   });
 
