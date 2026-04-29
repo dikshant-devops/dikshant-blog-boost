@@ -37,9 +37,9 @@ const Index = () => {
       <section className="relative bg-gradient-hero text-white py-20 px-4">
         <div className="container mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Master <span className="text-accent">DevOps</span> with Dikshant
+            Master <span className="text-emerald-300">DevOps</span> with Dikshant
           </h1>
-          <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-90">
+          <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-white/90">
             Learn modern DevOps practices, cloud technologies, and automation tools 
             through practical tutorials and real-world examples.
           </p>

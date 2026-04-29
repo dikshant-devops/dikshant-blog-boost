@@ -102,7 +102,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
             {subscriptionStep === 'success' && (
               <>
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-green-600">
+                  <DialogTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <CheckCircle className="w-5 h-5" />
                     Successfully Subscribed!
                   </DialogTitle>
@@ -144,9 +144,9 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-primary hover:opacity-90" 
+            <Button
+              type="submit"
+              className="w-full bg-gradient-primary hover:opacity-90"
               disabled={isLoading}
             >
               {isLoading ? "Loading..." : "Subscribe to Newsletter"}
@@ -160,7 +160,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
           {subscriptionStep === 'success' && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-green-600">
+                <DialogTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
                   <CheckCircle className="w-5 h-5" />
                   Successfully Subscribed!
                 </DialogTitle>

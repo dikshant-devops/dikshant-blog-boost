@@ -163,7 +163,7 @@ const About = () => {
         <Card className="bg-gradient-hero text-white text-center">
           <CardContent className="pt-8 pb-8">
             <h3 className="text-2xl font-bold mb-4">Ready to Level Up Your DevOps Skills?</h3>
-            <p className="mb-6 opacity-90">
+            <p className="mb-6 text-white/90">
               Join thousands of developers who are already learning with Tech With Dikshant.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

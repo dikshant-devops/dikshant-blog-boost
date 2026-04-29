@@ -94,6 +94,11 @@
     --border: 215 25% 15%;
     --input: 215 25% 15%;
     --ring: 213 94% 55%;
+
+    /* Darker gradients for white text contrast in dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(213 94% 35%), hsl(213 94% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(213 94% 35%) 0%, hsl(173 80% 35%) 100%);
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

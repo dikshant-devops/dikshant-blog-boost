@@ -175,14 +175,14 @@ export default function Connect() {
       icon: Linkedin,
       url: "https://linkedin.com/in/dikshant-rai",
       description: "Connect with me professionally and see my career journey",
-      color: "text-blue-600"
+      color: "text-blue-600 dark:text-blue-400"
     },
     {
       name: "Twitter",
       icon: Twitter,
       url: "https://twitter.com/dikshant_rai1",
       description: "Follow for quick DevOps tips and industry insights",
-      color: "text-blue-400"
+      color: "text-blue-400 dark:text-blue-300"
     },
     {
       name: "GitHub",
@@ -196,7 +196,7 @@ export default function Connect() {
       icon: Mail,
       url: "mailto:dikshantdevops@gmail.com",
       description: "Send me a direct email for detailed discussions",
-      color: "text-red-600"
+      color: "text-red-600 dark:text-red-400"
     }
   ];
 
