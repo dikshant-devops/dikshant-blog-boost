@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { BlogPost } from "@/types/blog";
 import { TAG_CONFIGS } from "@/config/tags";
+import type { BlogSearchIndex } from "@/utils/blogSearch";
 
 // Cache the compact indexes and hydrate full articles only on article routes.
 let postsCache: BlogPost[] | null = null;
 let cacheTimestamp: number = 0;
-let searchIndexCache: Record<string, string> | null = null;
+let searchIndexCache: BlogSearchIndex | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Map of filename to post ID for direct loading
@@ -64,14 +65,17 @@ async function loadIndexedPosts(): Promise<BlogPost[]> {
   return index.map(normalizeIndexedPost);
 }
 
-export async function loadBlogSearchIndex(): Promise<Record<string, string>> {
+export async function loadBlogSearchIndex(): Promise<BlogSearchIndex> {
   if (searchIndexCache) return searchIndexCache;
 
   const response = await fetch('/blog-search-index.json');
   if (!response.ok) throw new Error('Blog search index not found');
 
-  const entries = await response.json() as Array<{ id: string; searchText: string }>;
-  searchIndexCache = Object.fromEntries(entries.map(entry => [entry.id, entry.searchText]));
+  const index = await response.json() as BlogSearchIndex;
+  if (index.version !== 1 || !Array.isArray(index.documents)) {
+    throw new Error('Unsupported blog search index');
+  }
+  searchIndexCache = index;
   return searchIndexCache;
 }
 

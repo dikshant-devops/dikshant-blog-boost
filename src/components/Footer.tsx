@@ -123,7 +123,10 @@ export const Footer = () => {
 
         <div className="mt-10 flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Tech With Dikshant.</p>
-          <p>Built for engineers who verify before they deploy.</p>
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="transition-colors hover:text-primary">Privacy</Link>
+            <Link to="/terms" className="transition-colors hover:text-primary">Terms</Link>
+          </div>
         </div>
       </div>
     </footer>

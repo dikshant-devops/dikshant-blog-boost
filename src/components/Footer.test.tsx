@@ -48,6 +48,12 @@ describe('Footer', () => {
     expect(screen.getByText(new RegExp(year))).toBeInTheDocument();
   });
 
+  it('links to privacy and terms pages', () => {
+    renderFooter();
+    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
+    expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/terms');
+  });
+
   it('uses an editorial multi-column layout on desktop', () => {
     renderFooter();
     const grid = document.querySelector('.grid');

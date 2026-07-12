@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-export const BlogCardSkeleton = () => {
+export const BlogCardSkeleton = ({ className }: { className?: string }) => {
   return (
-    <Card className="h-full">
+    <Card className={cn("h-full", className)}>
       <CardHeader className="space-y-4">
         <div className="flex flex-wrap gap-2">
           <Skeleton className="h-5 w-16" />

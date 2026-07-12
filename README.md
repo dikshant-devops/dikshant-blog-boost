@@ -41,7 +41,6 @@ See [HOW_TO_ADD_BLOG_POSTS.md](./HOW_TO_ADD_BLOG_POSTS.md) for detailed instruct
 title: "Production Docker Deployment with Kubernetes"
 excerpt: "A tested Docker and Kubernetes deployment walkthrough with verification commands, observed output, and rollback guidance."
 date: "2024-01-20"
-readTime: "5 min read"
 tags: ["Docker", "Kubernetes"]
 category: "Containers"
 platform: "Kubernetes"

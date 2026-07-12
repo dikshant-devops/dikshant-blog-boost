@@ -135,6 +135,9 @@ describe('renderStaticPageHtml', () => {
     expect(html).toContain('GCP security');
     expect(html).toContain('<link rel="canonical" href="https://techwithdikshant.com"');
     expect(html).toContain('data-structured-data="webpage"');
+    expect(html).toContain('devops-operations-hero-960.jpg 960w');
+    expect(html).toContain('width="1920" height="1053"');
+    expect(html).toContain('fetchpriority="high"');
   });
 
   it('renders the author name and role in profile metadata', () => {
@@ -153,6 +156,23 @@ describe('renderStaticPageHtml', () => {
     expect(html).toContain('"name":"Dikshant Rai"');
     expect(html).toContain('"jobTitle":"Sr Site Reliability Engineer"');
     expect(html).toContain('"image":"https://techwithdikshant.com/images/about/dikshant-rai.jpg"');
+  });
+});
+
+describe('renderBlogIndexHtml copy', () => {
+  it('distinguishes searchable articles from the main feed', () => {
+    const playlistOnly = {
+      ...post,
+      id: 'playlist-only',
+      playlist: 'Production GCP Security',
+      playlistSlug: 'production-gcp-security',
+      playlistOrder: 2,
+      playlistOnly: true,
+    };
+    const html = renderBlogIndexHtml(shell, [post, playlistOnly]);
+    expect(html).toContain('2 searchable articles · 1 in main feed');
+    expect(html).toContain('Playlist-only lessons stay out of the main feed but remain independently searchable.');
+    expect(html).not.toContain('normal library');
   });
 });
 

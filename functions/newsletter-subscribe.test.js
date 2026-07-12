@@ -1,270 +1,186 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { onRequestPost, onRequestOptions } from './newsletter-subscribe.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Helper to create a mock request
-function mockRequest(body, origin = 'https://techwithdikshant.com') {
-  return {
-    json: () => Promise.resolve(body),
-    headers: {
-      get: (name) => {
-        if (name === 'Origin') return origin;
-        return null;
-      },
-    },
-  };
+import { onRequestOptions, onRequestPost } from './newsletter-subscribe.js';
+
+const VALID_BODY = {
+  email: 'reader@example.com',
+  turnstileToken: 'valid-turnstile-token',
+};
+
+function createRequest(body = VALID_BODY, options = {}) {
+  const rawBody = options.rawBody ?? JSON.stringify(body);
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+    Origin: options.origin ?? 'https://techwithdikshant.com',
+    'CF-Connecting-IP': options.ip ?? '203.0.113.10',
+  });
+  if (options.contentLength) headers.set('Content-Length', String(options.contentLength));
+
+  return new Request('https://techwithdikshant.com/newsletter-subscribe', {
+    method: 'POST',
+    headers,
+    body: rawBody,
+  });
 }
 
-// Helper to create context
-function mockContext(body, env = {}, origin = 'https://techwithdikshant.com') {
+function createContext(body = VALID_BODY, env = {}, options = {}) {
   return {
-    request: mockRequest(body, origin),
+    request: createRequest(body, options),
     env: {
       BEEHIIV_API_KEY: 'test-api-key',
       BEEHIIV_PUBLICATION_ID: 'test-pub-id',
+      TURNSTILE_SECRET_KEY: 'test-turnstile-secret',
+      TURNSTILE_ALLOWED_HOSTNAMES: 'techwithdikshant.com',
+      NEWSLETTER_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
       ...env,
     },
   };
 }
 
-// Helper to parse response body
-async function parseResponse(response) {
-  const text = await response.text();
-  return JSON.parse(text);
+function mockServices({ beehiivStatus = 201, turnstile = {} } = {}) {
+  return vi.fn(async (url) => {
+    if (String(url).includes('/siteverify')) {
+      return new Response(JSON.stringify({
+        success: true,
+        hostname: 'techwithdikshant.com',
+        action: 'newsletter_subscribe',
+        ...turnstile,
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(beehiivStatus === 500 ? JSON.stringify({ message: 'Internal error' }) : null, {
+      status: beehiivStatus,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+}
+
+async function responseBody(response) {
+  return JSON.parse(await response.text());
 }
 
 describe('newsletter-subscribe', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.stubGlobal('fetch', mockServices());
   });
 
-  describe('onRequestOptions (CORS preflight)', () => {
-    it('returns 204 with CORS headers', async () => {
-      const context = mockContext({});
-      const response = await onRequestOptions(context);
-
-      expect(response.status).toBe(204);
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://techwithdikshant.com');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
-      expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
-    });
+  it('returns the expected CORS preflight response', async () => {
+    const response = await onRequestOptions(createContext().request ? createContext() : null);
+    expect(response.status).toBe(204);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://techwithdikshant.com');
+    expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
   });
 
-  describe('CORS origin validation', () => {
-    it('allows techwithdikshant.com origin', async () => {
-      const context = mockContext({ email: 'test@example.com' }, {}, 'https://techwithdikshant.com');
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 201 }));
-
-      const response = await onRequestPost(context);
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://techwithdikshant.com');
-    });
-
-    it('allows localhost:8080 origin', async () => {
-      const context = mockContext({ email: 'test@example.com' }, {}, 'http://localhost:8080');
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 201 }));
-
-      const response = await onRequestPost(context);
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:8080');
-    });
-
-    it('falls back to production origin for unknown origins', async () => {
-      const context = mockContext({ email: 'test@example.com' }, {}, 'https://evil.com');
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 201 }));
-
-      const response = await onRequestPost(context);
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://techwithdikshant.com');
-    });
+  it('rejects an untrusted browser origin before external calls', async () => {
+    const response = await onRequestPost(createContext(VALID_BODY, {}, { origin: 'https://attacker.example' }));
+    expect(response.status).toBe(403);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  describe('email validation', () => {
-    it('rejects missing email', async () => {
-      const context = mockContext({});
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
+  it('allows the active loopback preview origin', async () => {
+    const response = await onRequestPost(createContext(
+      { email: 'reader@example.com' },
+      {},
+      { origin: 'http://127.0.0.1:4174' },
+    ));
 
-      expect(response.status).toBe(400);
-      expect(body.success).toBe(false);
-      expect(body.error).toBe('Email is required');
-    });
-
-    it('rejects empty email', async () => {
-      const context = mockContext({ email: '' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(400);
-      expect(body.error).toBe('Email is required');
-    });
-
-    it('rejects invalid email format', async () => {
-      const context = mockContext({ email: 'not-an-email' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(400);
-      expect(body.error).toBe('Invalid email format');
-    });
-
-    it('rejects email without domain', async () => {
-      const context = mockContext({ email: 'user@' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(400);
-      expect(body.error).toBe('Invalid email format');
-    });
-
-    it('accepts valid email', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 201 }));
-      const context = mockContext({ email: 'valid@example.com' });
-      const response = await onRequestPost(context);
-
-      expect(response.status).toBe(200);
-    });
+    expect(response.status).toBe(400);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://127.0.0.1:4174');
+    expect(await response.json()).toEqual({ success: false, error: 'Security verification is required' });
   });
 
-  describe('environment validation', () => {
-    it('returns 500 when BEEHIIV_API_KEY is missing', async () => {
-      const context = mockContext(
-        { email: 'test@example.com' },
-        { BEEHIIV_API_KEY: '', BEEHIIV_PUBLICATION_ID: 'pub-id' }
-      );
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(500);
-      expect(body.error).toBe('Server configuration error');
-    });
-
-    it('returns 500 when BEEHIIV_PUBLICATION_ID is missing', async () => {
-      const context = mockContext(
-        { email: 'test@example.com' },
-        { BEEHIIV_API_KEY: 'key', BEEHIIV_PUBLICATION_ID: '' }
-      );
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(500);
-      expect(body.error).toBe('Server configuration error');
-    });
+  it('rejects a declared oversized body', async () => {
+    const response = await onRequestPost(createContext(VALID_BODY, {}, { contentLength: 5000 }));
+    expect(response.status).toBe(413);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  describe('Beehiiv API responses', () => {
-    it('handles 201 (new subscription)', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 201 }));
-
-      const context = mockContext({ email: 'new@example.com' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(200);
-      expect(body.success).toBe(true);
-      expect(body.message).toContain('Successfully subscribed');
-    });
-
-    it('handles 409 (already subscribed)', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 409 }));
-
-      const context = mockContext({ email: 'existing@example.com' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(200);
-      expect(body.success).toBe(true);
-      expect(body.message).toContain('already subscribed');
-    });
-
-    it('handles 401 (unauthorized)', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401 }));
-
-      const context = mockContext({ email: 'test@example.com' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(500);
-      expect(body.error).toBe('Server authentication error');
-    });
-
-    it('handles 429 (rate limited)', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 429 }));
-
-      const context = mockContext({ email: 'test@example.com' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(429);
-      expect(body.error).toContain('Too many requests');
-    });
-
-    it('handles unknown error status with error body', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        status: 500,
-        json: () => Promise.resolve({ message: 'Internal error' }),
-      }));
-
-      const context = mockContext({ email: 'test@example.com' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(500);
-      expect(body.error).toBe('Internal error');
-    });
-
-    it('handles unknown error status with unparseable body', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        status: 502,
-        json: () => Promise.reject(new Error('not json')),
-      }));
-
-      const context = mockContext({ email: 'test@example.com' });
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(502);
-      expect(body.error).toContain('Failed to subscribe');
-    });
+  it('rejects an oversized body when content-length is absent', async () => {
+    const response = await onRequestPost(createContext(null, {}, { rawBody: JSON.stringify({ padding: 'x'.repeat(5000) }) }));
+    expect(response.status).toBe(413);
   });
 
-  describe('unexpected errors', () => {
-    it('handles request.json() failure', async () => {
-      const context = {
-        request: {
-          json: () => Promise.reject(new Error('Invalid JSON')),
-          headers: { get: () => 'https://techwithdikshant.com' },
-        },
-        env: { BEEHIIV_API_KEY: 'key', BEEHIIV_PUBLICATION_ID: 'pub' },
-      };
-
-      const response = await onRequestPost(context);
-      const body = await parseResponse(response);
-
-      expect(response.status).toBe(500);
-      expect(body.error).toContain('unexpected error');
-    });
+  it('rejects malformed JSON with a client error', async () => {
+    const response = await onRequestPost(createContext(null, {}, { rawBody: '{broken' }));
+    expect(response.status).toBe(400);
+    expect((await responseBody(response)).error).toContain('Invalid JSON');
   });
 
-  describe('Beehiiv API request format', () => {
-    it('sends correct payload to Beehiiv', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({ status: 201 });
-      vi.stubGlobal('fetch', mockFetch);
+  it.each([
+    [{ turnstileToken: 'token' }, 'Email is required'],
+    [{ email: 'not-an-email', turnstileToken: 'token' }, 'Invalid email format'],
+    [{ email: 'a'.repeat(250) + '@example.com', turnstileToken: 'token' }, 'Invalid email format'],
+    [{ email: 'reader@example.com' }, 'Security verification is required'],
+    [{ email: 'reader@example.com', turnstileToken: 'x'.repeat(2049) }, 'Security verification is required'],
+  ])('rejects invalid input %#', async (body, message) => {
+    const response = await onRequestPost(createContext(body));
+    expect(response.status).toBe(400);
+    expect((await responseBody(response)).error).toBe(message);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
-      const context = mockContext({ email: 'test@example.com' });
-      await onRequestPost(context);
+  it('fails closed when the rate limiter binding is missing', async () => {
+    const response = await onRequestPost(createContext(VALID_BODY, { NEWSLETTER_RATE_LIMITER: undefined }));
+    expect(response.status).toBe(500);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.beehiiv.com/v2/publications/test-pub-id/subscriptions',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer test-api-key',
-            'Content-Type': 'application/json',
-          }),
-        })
-      );
+  it('returns 429 before verification when the rate limit is exceeded', async () => {
+    const limiter = { limit: vi.fn().mockResolvedValue({ success: false }) };
+    const response = await onRequestPost(createContext(VALID_BODY, { NEWSLETTER_RATE_LIMITER: limiter }));
+    expect(response.status).toBe(429);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
-      const sentBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(sentBody.email).toBe('test@example.com');
-      expect(sentBody.send_welcome_email).toBe(true);
-      expect(sentBody.utm_source).toBe('website');
+  it.each([
+    [{ success: false }, 'unsuccessful token'],
+    [{ action: 'contact' }, 'wrong action'],
+    [{ hostname: 'attacker.example' }, 'wrong hostname'],
+  ])('rejects Turnstile validation with $1', async (turnstile) => {
+    vi.stubGlobal('fetch', mockServices({ turnstile }));
+    const response = await onRequestPost(createContext());
+    expect(response.status).toBe(400);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails verification when the Turnstile secret is missing', async () => {
+    const response = await onRequestPost(createContext(VALID_BODY, { TURNSTILE_SECRET_KEY: '' }));
+    expect(response.status).toBe(400);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('validates configuration before calling Beehiiv', async () => {
+    const response = await onRequestPost(createContext(VALID_BODY, { BEEHIIV_API_KEY: '' }));
+    expect(response.status).toBe(500);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [201, 200, 'Successfully subscribed'],
+    [409, 200, 'already subscribed'],
+    [401, 500, 'authentication'],
+    [429, 429, 'Too many requests'],
+    [500, 500, 'Internal error'],
+  ])('maps Beehiiv status %i to a controlled response', async (beehiivStatus, expectedStatus, message) => {
+    vi.stubGlobal('fetch', mockServices({ beehiivStatus }));
+    const response = await onRequestPost(createContext());
+    expect(response.status).toBe(expectedStatus);
+    expect(JSON.stringify(await responseBody(response))).toContain(message);
+  });
+
+  it('normalizes email and sends the existing Beehiiv subscription options', async () => {
+    const serviceFetch = mockServices();
+    vi.stubGlobal('fetch', serviceFetch);
+    await onRequestPost(createContext({ ...VALID_BODY, email: ' Reader@Example.COM ' }));
+
+    const beehiivCall = serviceFetch.mock.calls.find(([url]) => String(url).includes('api.beehiiv.com'));
+    expect(beehiivCall).toBeTruthy();
+    const payload = JSON.parse(beehiivCall[1].body);
+    expect(payload).toMatchObject({
+      email: 'reader@example.com',
+      reactivate_existing: false,
+      send_welcome_email: true,
+      utm_source: 'website',
     });
   });
 });

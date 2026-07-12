@@ -29,7 +29,6 @@ const Admin = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState("");
   const [author, setAuthor] = useState("Dikshant Rai");
-  const [readTime, setReadTime] = useState("5");
   const { toast } = useToast();
 
   const addTag = () => {
@@ -111,7 +110,6 @@ ${playlistFrontmatter}difficulty: ${yamlString(difficulty)}
 image: ${yamlString(image)}
 tags: ${yamlList(tags)}
 tools: ${yamlList(tools)}
-readTime: ${yamlString(`${readTime} min read`)}
 ---
 
 ${content}`;
@@ -150,7 +148,6 @@ ${content}`;
     setCurrentTool("");
     setTags([]);
     setCurrentTag("");
-    setReadTime("5");
   };
 
   return (
@@ -209,16 +206,6 @@ ${content}`;
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="readTime">Read Time (minutes)</Label>
-                <Input
-                  id="readTime"
-                  type="number"
-                  placeholder="5"
-                  value={readTime}
-                  onChange={(e) => setReadTime(e.target.value)}
-                />
-              </div>
               <div>
                 <Label htmlFor="publishDate">Publish Date</Label>
                 <Input

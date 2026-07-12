@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBlogMarkdown, validateBlogPosts } from './content.js';
+import { estimateReadTime, parseBlogMarkdown, validateBlogPosts } from './content.js';
 
 const articleBody = Array.from({ length: 32 }, (_, index) =>
   `Implementation step ${index + 1} records the command, observed output, validation result, rollback condition, and operational reasoning for this cloud security change.`
@@ -20,6 +20,22 @@ ${body}
 `;
 
 describe('parseBlogMarkdown', () => {
+  it('estimates prose and code reading time separately', () => {
+    const prose = Array.from({ length: 200 }, () => 'word').join(' ');
+    const code = Array.from({ length: 40 }, (_, index) => `command-${index}`).join('\n');
+    expect(estimateReadTime(`${prose}\n\n\`\`\`bash\n${code}\n\`\`\``)).toEqual({
+      wordCount: 200,
+      readTime: '2 min read',
+    });
+  });
+
+  it('rejects manual read time that would become stale', () => {
+    expect(() => parseBlogMarkdown(
+      'generated-read-time.md',
+      frontmatter('readTime: "99 min read"\n')
+    )).toThrow(/generated automatically/);
+  });
+
   it('keeps a post standalone when playlist is omitted', () => {
     const post = parseBlogMarkdown('standalone-gcp-note.md', frontmatter());
 

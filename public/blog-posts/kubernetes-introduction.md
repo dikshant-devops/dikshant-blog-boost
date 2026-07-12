@@ -2,20 +2,19 @@
 title: "Introduction to Kubernetes: Container Orchestration Made Simple"
 excerpt: "Discover how Kubernetes can help you manage and scale containerized applications in production environments."
 date: "2024-12-18"
-updatedDate: "2024-12-18"
+updatedDate: "2026-07-12"
 author: "Dikshant Rai"
 category: "Containers"
 platform: "Kubernetes"
 playlist: "Kubernetes Foundations"
 playlistOrder: 1
 difficulty: "Beginner"
-image: "/og-default.jpg"
-readTime: "10 min read"
+image: "/images/social/containers.png"
 tags: ["Kubernetes", "DevOps", "Containers", "Orchestration"]
 tools: ["Kubernetes", "Docker"]
 ---
 
-As applications grow and containerization becomes standard, managing hundreds or thousands of containers manually becomes impossible. This is where Kubernetes (K8s) comes in - the de facto standard for container orchestration.
+As an application grows across multiple machines, operators need a consistent way to schedule containers, replace failed replicas, publish services, and roll out changes. Kubernetes provides APIs and controllers for that work.
 
 ## What is Kubernetes?
 
@@ -35,7 +34,7 @@ Imagine managing 100+ containers manually:
 ### The Kubernetes Solution
 
 Kubernetes automates all of this and more:
-- **Automated Deployment**: Rolling updates with zero downtime
+- **Controlled Deployment**: Rolling updates with configurable availability; readiness probes, capacity, and disruption settings still determine whether users see downtime
 - **Auto-scaling**: Scale based on CPU, memory, or custom metrics
 - **Self-healing**: Automatically restart failed containers
 - **Load Balancing**: Built-in service discovery and load balancing
@@ -111,14 +110,14 @@ spec:
 ```
 
 ### 4. Namespaces
-Virtual clusters within a physical cluster:
+Logical scopes within a cluster:
 - Organize resources by team, project, or environment
-- Provide resource isolation
-- Enable RBAC (Role-Based Access Control)
+- Scope names and many RBAC permissions
+- Do not provide a security boundary by themselves; isolation also requires controls such as RBAC, NetworkPolicy, quotas, and workload security settings
 
 ## Kubernetes Architecture
 
-### Master Node Components
+### Control Plane Components
 - **API Server**: Frontend for Kubernetes control plane
 - **etcd**: Distributed key-value store for cluster data
 - **Scheduler**: Assigns pods to nodes
@@ -127,7 +126,7 @@ Virtual clusters within a physical cluster:
 ### Worker Node Components
 - **kubelet**: Agent that runs on each node
 - **kube-proxy**: Network proxy for services
-- **Container Runtime**: Docker, containerd, or CRI-O
+- **Container Runtime**: A Container Runtime Interface (CRI) implementation such as containerd or CRI-O. Docker Engine requires an additional CRI adapter because the in-tree dockershim was removed in Kubernetes 1.24.
 
 ## Getting Started with Kubernetes
 
@@ -171,10 +170,10 @@ kubectl get nodes
 
 # Pod management
 kubectl get pods
-kubectl create -f pod.yaml
+kubectl apply -f pod.yaml
 kubectl delete pod <pod-name>
 kubectl logs <pod-name>
-kubectl exec -it <pod-name> -- /bin/bash
+kubectl exec -it <pod-name> -- /bin/sh
 
 # Deployment management
 kubectl get deployments
@@ -193,60 +192,17 @@ kubectl top nodes
 kubectl top pods
 ```
 
-## Real-World Example: Deploying a Web Application
+## Worked Example: Deploying a Stateless Web Application
 
-Let's deploy a complete web application with database:
+This example keeps the first deployment focused on a stateless workload. A production database needs persistent storage, backup and restore procedures, upgrade planning, credentials from an external secret workflow, and failure testing. It should not be copied from a minimal Deployment snippet.
 
-### 1. Database Deployment
+### 1. Application Deployment
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:13
-        env:
-        - name: POSTGRES_DB
-          value: myapp
-        - name: POSTGRES_USER
-          value: user
-        - name: POSTGRES_PASSWORD
-          value: password
-        ports:
-        - containerPort: 5432
-```
-
-### 2. Database Service
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres-service
-spec:
-  selector:
-    app: postgres
-  ports:
-  - port: 5432
-    targetPort: 5432
-```
-
-### 3. Web Application Deployment
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: web-app-deployment
+  name: web-app
 spec:
   replicas: 3
   selector:
@@ -259,41 +215,56 @@ spec:
     spec:
       containers:
       - name: web-app
-        image: my-web-app:latest
-        env:
-        - name: DATABASE_URL
-          value: postgresql://user:password@postgres-service:5432/myapp
+        image: registry.example.com/web-app:1.0.0
         ports:
         - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
 ```
 
-### 4. Web Application Service
+Use an immutable image digest in production when the registry and release process support it. The readiness probe prevents a Pod from receiving Service traffic until the application reports that it is ready.
+
+### 2. Application Service
+
 ```yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: web-app-service
+  name: web-app
 spec:
   selector:
     app: web-app
   ports:
   - port: 80
     targetPort: 8080
-  type: LoadBalancer
+  type: ClusterIP
 ```
 
-Deploy everything:
+Save both resources in `web-app.yaml`, then apply and verify them:
+
 ```bash
-kubectl apply -f database-deployment.yaml
-kubectl apply -f database-service.yaml
-kubectl apply -f web-app-deployment.yaml
-kubectl apply -f web-app-service.yaml
+kubectl apply -f web-app.yaml
+kubectl rollout status deployment/web-app
+kubectl get pods -l app=web-app
+kubectl get service web-app
 ```
+
+A `ClusterIP` Service is reachable only inside the cluster. Add an Ingress, Gateway API implementation, or `LoadBalancer` Service when external traffic is required, based on the capabilities of the cluster provider.
 
 ## Advanced Features
 
 ### 1. ConfigMaps and Secrets
-Store configuration and sensitive data:
+Store non-sensitive configuration in ConfigMaps and secret material in Secrets or an external secret provider:
 
 ```yaml
 # ConfigMap
@@ -305,6 +276,7 @@ data:
   database_host: postgres-service
   app_mode: production
 
+---
 # Secret
 apiVersion: v1
 kind: Secret
@@ -312,8 +284,10 @@ metadata:
   name: app-secrets
 type: Opaque
 data:
-  database_password: cGFzc3dvcmQ=  # base64 encoded
+  database_password: cGxhY2Vob2xkZXI=  # "placeholder"; do not commit a real credential
 ```
+
+Base64 encoding is not encryption. Enable encryption at rest for Kubernetes API data, restrict Secret access with RBAC, and avoid committing real secret values to source control.
 
 ### 2. Horizontal Pod Autoscaler
 Automatically scale based on metrics:
@@ -395,7 +369,7 @@ spec:
 - **DigitalOcean DOKS**: Simple managed Kubernetes
 
 ### High Availability
-- Multiple master nodes
+- Multiple control-plane instances
 - Node distribution across availability zones
 - Regular backups of etcd
 - Disaster recovery planning
@@ -410,8 +384,13 @@ spec:
 
 ## Conclusion
 
-Kubernetes might seem complex initially, but it solves real problems at scale. Start with basic concepts, practice with local clusters, and gradually explore advanced features.
+Kubernetes is useful when its reconciliation and scheduling model addresses a real multi-host operational need. A local cluster is enough to learn the API, but production readiness also depends on identity, networking, storage, observability, upgrades, and failure recovery.
 
-The investment in learning Kubernetes pays off as your applications grow and your infrastructure needs become more sophisticated.
+The next useful step is to deploy one stateless service, observe its rollout, deliberately break its readiness check, and inspect the resulting events before adding more platform features.
 
-Ready to orchestrate your containers? Start with minikube and take it step by step! 🚢
+## References
+
+- [Kubernetes components](https://kubernetes.io/docs/concepts/overview/components/)
+- [Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
+- [Container runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/)
+- [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)

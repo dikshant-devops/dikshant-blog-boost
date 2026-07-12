@@ -2,151 +2,95 @@
 title: "Understanding Google Cloud Armor: A Complete Guide"
 excerpt: "Learn how Google Cloud Armor protects internet-facing workloads with WAF rules, DDoS defense, rate limiting, logging, and adaptive protection."
 date: "2025-01-05"
-updatedDate: "2025-01-05"
+updatedDate: "2026-07-12"
 author: "Dikshant Rai"
 category: "Security"
 platform: "GCP"
 playlist: "GCP Security Essentials"
 playlistOrder: 2
 difficulty: "Intermediate"
-image: "/og-default.jpg"
+image: "/images/social/security.png"
 tags: ["GCP", "Cloud Armor", "Security", "Load Balancer", "Networking"]
 tools: ["Cloud Armor", "Load Balancer"]
-readTime: "3 min read"
 ---
 
-Securing applications exposed to the internet has become more critical than ever. Distributed Denial-of-Service (DDoS) attacks, malicious traffic, and abuse patterns are increasing in frequency and complexity. Google Cloud offers **Cloud Armor**, a powerful security service designed to protect your workloads at scale.  
+Cloud Armor applies edge security policies to supported Google Cloud load-balancing backends. It is useful when a team needs to reject hostile requests, apply web application firewall rules, or throttle abusive clients before traffic reaches the application.
 
-In this blog, we'll explore Cloud Armor from the ground up—what it is, how it works, features, use cases, pricing, and best practices.  
+It is not a replacement for application authorization, IAM, private networking, or secure code. Treat it as one control in a layered design and verify the exact load balancer and backend type you plan to protect.
 
----
+## Where Cloud Armor fits
 
-## 🌐 What is Google Cloud Armor?
+Google's infrastructure provides network-level DDoS protection for supported services. A Cloud Armor security policy adds request evaluation at the edge. Depending on the policy type and attached endpoint, rules can match IP ranges, geography, request attributes, threat-intelligence lists, or preconfigured WAF signatures.
 
-**Google Cloud Armor** is a **web application firewall (WAF) and DDoS protection service** integrated into Google Cloud Platform (GCP). It provides **defense against L3/L4 network-based attacks** and **application-level (L7) threats**, ensuring your workloads remain available and secure.
+The main controls are:
 
-Cloud Armor sits in front of your Google Cloud load balancers and filters traffic **before it reaches your backend services**.  
+- **Custom rules:** allow, deny, redirect, or throttle matching traffic.
+- **Preconfigured WAF rules:** detect common application attacks such as SQL injection and cross-site scripting. Tune signatures for the application instead of enabling every rule blindly.
+- **Rate limiting:** throttle or temporarily ban clients that exceed a configured threshold. The chosen key and thresholds determine whether legitimate users sharing an address are affected.
+- **Adaptive Protection:** analyze Layer 7 traffic and produce alerts or suggested mitigations. Available capabilities depend on the Cloud Armor tier.
+- **Logging:** record policy decisions in Cloud Logging when request logging is enabled on the load balancer.
 
----
-
-## 🛡️ Key Features of Cloud Armor
-
-1. **DDoS Protection**  
-   - Built on Google's global infrastructure.  
-   - Mitigates volumetric and protocol-based attacks.  
-   - Always-on protection with no need for manual intervention.
-
-2. **Web Application Firewall (WAF)**  
-   - Pre-configured WAF rules based on **OWASP Top 10** vulnerabilities.  
-   - Custom security policies using **rules language**.  
-   - Block SQL injection, XSS, remote file inclusion, etc.
-
-3. **Adaptive Protection (ML-powered)**  
-   - Machine Learning analyzes traffic patterns.  
-   - Detects **L7 DDoS attacks** and anomalies in real-time.  
-   - Generates **suggested rules** to block abusive requests.
-
-4. **Rate Limiting**  
-   - Prevents abuse by limiting requests per IP or region.  
-   - Useful for login endpoints, APIs, and high-traffic apps.
-
-5. **Geo-based Access Control**  
-   - Allow/Deny traffic from specific countries.  
-   - Commonly used for compliance and fraud prevention.
-
-6. **Integration with Cloud Logging & Monitoring**  
-   - Logs every request decision.  
-   - Seamlessly integrates with **Cloud Monitoring, BigQuery, and SIEMs**.  
-
----
-
-## 🏗️ How Cloud Armor Works
+## Request path
 
 ```mermaid
 flowchart LR
-    A[Client Request] --> B[Google Cloud Global Load Balancer]
+    A[Client request] --> B[Supported Google Cloud load balancer]
     B --> C[Cloud Armor Security Policy]
-    C -->|Allowed| D[Backend Services: VMs, GKE, Serverless]
-    C -->|Denied| E[Blocked Traffic]
+    C -->|Allowed| D[Backend service]
+    C -->|Denied or throttled| E[Edge response]
 ```
 
+The policy is associated with a supported backend service or backend bucket. Requests are evaluated by priority; the lowest numeric priority is evaluated first. Every policy also has a default rule, so review that behavior before attaching the policy.
 
----
+## Create and test a policy
 
-## ⚙️ Setting Up Cloud Armor
+Create a global backend security policy:
 
-1. **Create a Security Policy**
-
-```
+```bash
 gcloud compute security-policies create my-security-policy \
     --description "Cloud Armor WAF policy"
 ```
 
-2. **Add Rules (Example: Block SQL Injection)**
+Add a preconfigured SQL injection rule in preview mode. Preview records what the rule would do without enforcing the deny action:
 
-```
+```bash
 gcloud compute security-policies rules create 1000 \
     --security-policy my-security-policy \
     --expression "evaluatePreconfiguredWaf('sqli-v33-stable')" \
-    --action deny-403
+    --action deny-403 \
+    --preview
 ```
 
-3. **Attach Policy to a Backend Service**
+Attach the policy to the intended global backend service:
 
-```
+```bash
 gcloud compute backend-services update my-backend-service \
-    --security-policy my-security-policy
+    --security-policy my-security-policy \
+    --global
 ```
 
----
+Generate representative traffic, then inspect preview matches in Cloud Logging. Check false positives by path, client type, and expected payload. When the result is acceptable, update the rule to remove preview mode. Keep a rollback command and an owner for every enforced rule.
 
-## 📊 Example Use Cases
-1. **DDoS Protection for Websites**
-	•	E-commerce site under a volumetric attack.
-	•	Cloud Armor automatically scales defense.
-2.	**API Protection**
-	•	Rate-limiting prevents credential stuffing or brute force.
-	•	WAF policies filter malicious JSON payloads.
-3.	**Geo-restriction**
-	•	Financial applications allow access only from specific regions.
-4.	**Adaptive Protection**
-	•	Detects suspicious traffic patterns (e.g., repeated login failures).
-	•	Suggests rules to mitigate without human intervention.
+## Pricing model
 
+Cloud Armor Standard is pay as you go. Current charges vary by policy scope and can include security-policy hours, rule hours, and evaluated requests. Cloud Armor Enterprise Paygo and Annual use different protected-resource, subscription, and data-processing models. There is no general "first five rules are free" assumption to use in an estimate.
 
----
+Pricing and tier features change, so calculate from the active [Cloud Armor pricing page](https://cloud.google.com/armor/pricing) and the actual number of policies, rules, requests, protected resources, and outbound data for the design.
 
-## 💰 Pricing Overview
+## Production checklist
 
-Cloud Armor pricing is based on:
-	•	Policy Charges: $5 per security policy per month.
-	•	Rule Charges: $1 per rule per month (after first 5 free).
-	•	Request Charges: $0.75 per million requests evaluated.
-	•	Adaptive Protection: Additional charges apply.
+- Confirm that the frontend and backend type supports the intended policy.
+- Keep the default rule explicit and review rule priority for shadowing.
+- Start new WAF and custom expressions in preview mode.
+- Enable request logging and alert on deny, throttle, and preview-match changes.
+- Tune preconfigured WAF signatures against real application requests.
+- Avoid using source IP as identity when proxies or shared networks make it ambiguous.
+- Protect administrative paths with application authentication even when an edge rule restricts access.
+- Review pricing and Enterprise enrollment at the project and billing-account level.
+- Store policy creation and rule changes in reviewed automation where possible.
 
-[**🔗 Official Pricing**](https://cloud.google.com/armor/pricing)
+## References
 
----
-
-## ✅ Best Practices
-	•	Start in Preview Mode: Test rules in preview before enforcing.
-	•	Layered Security: Combine Cloud Armor with IAM, VPC SC, Identity-Aware Proxy.
-	•	Enable Logging: Export logs to BigQuery for analysis.
-	•	Use Adaptive Protection: Let ML handle evolving attack vectors.
-	•	Monitor Regularly: Create dashboards in Cloud Monitoring.
- ---
-
-## 🚀 Why Choose Cloud Armor?
-
-Google Cloud Armor brings Google-scale security to your workloads. Instead of building custom firewalls or relying on external appliances, you benefit from Google's battle-tested defense mechanisms used to protect services like YouTube, Gmail, and Search.
-	•	Scalability: Protection grows with your traffic.
-	•	Simplicity: Integrates natively with Google Cloud load balancers.
-	•	Cost-efficient: Pay per request, not per appliance.
-
----
-
-## 🔮 Conclusion
-
-Cloud Armor is not just a firewall—it's a comprehensive security shield for your cloud workloads. By combining DDoS protection, WAF, adaptive ML-based detection, and granular access controls, it allows businesses to focus on growth while staying secure.
-
-If you're running internet-facing workloads on GCP, Cloud Armor should be a key part of your security strategy.
+- [Cloud Armor overview](https://cloud.google.com/armor/docs/cloud-armor-overview)
+- [Security policy concepts](https://cloud.google.com/armor/docs/security-policy-concepts)
+- [Cloud Armor pricing](https://cloud.google.com/armor/pricing)

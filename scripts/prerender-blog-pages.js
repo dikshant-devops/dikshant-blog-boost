@@ -272,7 +272,7 @@ function renderStaticBlogListing(posts) {
   const playlistMarkup = playlists.length > 0
     ? `<section aria-labelledby="playlists-heading" class="mb-10 border-y py-6">
         <h2 id="playlists-heading" class="mb-4 text-xl font-semibold">Playlists</h2>
-        <p class="mb-4 text-sm text-muted-foreground">Optional ordered collections. Every article also remains in the normal library.</p>
+        <p class="mb-4 text-sm text-muted-foreground">Optional ordered collections. Playlist-only lessons stay out of the main feed but remain independently searchable.</p>
         <ul class="grid grid-cols-1 gap-3 md:grid-cols-2">${playlists.map(item => `
           <li><a href="/playlists/${encodeURIComponent(item.slug)}" class="flex justify-between rounded-md border p-4"><span>${htmlEscape(item.name)}</span><span>${item.posts.length} ${item.posts.length === 1 ? 'article' : 'articles'}</span></a></li>`).join('')}
         </ul>
@@ -292,6 +292,7 @@ function renderStaticBlogListing(posts) {
         <p class="mb-2 text-xs font-semibold uppercase text-primary">Implementation library</p>
         <h1 class="text-4xl font-bold md:text-5xl">DevOps field notes</h1>
         <p class="mt-4 text-lg text-muted-foreground">Cloud infrastructure, delivery pipelines, networking, and container operations explained through practical engineering work.</p>
+        <p class="mt-3 text-sm text-muted-foreground">${posts.length} searchable ${posts.length === 1 ? 'article' : 'articles'} · ${listingPosts.length} in main feed</p>
       </header>
       ${playlistMarkup}
       <section aria-label="Latest articles" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">${articles}</section>
@@ -300,8 +301,8 @@ function renderStaticBlogListing(posts) {
 }
 
 export function renderBlogIndexHtml(shell, posts) {
-  const title = 'DevOps Blog - Tutorials & Best Practices | Tech With Dikshant';
-  const description = 'Explore practical DevOps tutorials covering Docker, Kubernetes, CI/CD, cloud platforms, networking, security, and automation.';
+  const title = 'DevOps Field Notes | Tech With Dikshant';
+  const description = 'Practical field notes on GCP, AWS, Kubernetes, Docker, GitHub Actions, networking, and reliability, with commands, tradeoffs, and verification steps.';
   const canonicalUrl = 'https://techwithdikshant.com/blog';
 
   let html = shell.replace(/<title>[^<]*<\/title>/i, `<title>${htmlEscape(title)}</title>`);
@@ -339,8 +340,8 @@ export function renderBlogIndexHtml(shell, posts) {
 const STATIC_PAGES = [
   {
     route: '/',
-    title: 'Tech With Dikshant - DevOps Tutorials & Insights',
-    description: 'Master DevOps with practical tutorials on Docker, Kubernetes, CI/CD, cloud platforms, networking, security, and automation.',
+    title: 'Tech With Dikshant | Practical DevOps Field Notes',
+    description: 'Practical DevOps field notes on cloud infrastructure, CI/CD, networking, containers, and reliability, with tested commands and operational context.',
     heading: 'Tech With Dikshant',
     body: 'Practical cloud, CI/CD, networking, and container guides built around the decisions engineers make in real systems.'
   },
@@ -364,6 +365,30 @@ const STATIC_PAGES = [
     description: 'Contact Dikshant Rai about site reliability engineering, cloud infrastructure, technical collaboration, or published tutorials.',
     heading: 'Start a useful conversation',
     body: 'Ask about a published guide, discuss a DevOps problem, or propose a technical collaboration.'
+  },
+  {
+    route: '/privacy',
+    title: 'Privacy Policy | Tech With Dikshant',
+    description: 'How Tech With Dikshant handles newsletter subscriptions, contact messages, security data, and local preferences.',
+    heading: 'Privacy policy',
+    body: 'Newsletter, contact, security, and browser-preference data used by this website.',
+    sections: [
+      ['Information you provide', 'Newsletter addresses are processed by Beehiiv. Contact names, addresses, subjects, and messages are stored in SheetDB for review and response.'],
+      ['Security data', 'Cloudflare hosts the site and provides Turnstile verification and request rate limiting. Contact records include the connecting IP address and browser user-agent string.'],
+      ['Your choices', 'Every newsletter includes an unsubscribe option. Data access or deletion requests can be sent to dikshantdevops@gmail.com.']
+    ]
+  },
+  {
+    route: '/terms',
+    title: 'Terms of Use | Tech With Dikshant',
+    description: 'Terms for using Tech With Dikshant articles, code examples, external links, and website services.',
+    heading: 'Terms of use',
+    body: 'Expectations for technical examples, original content, external services, and acceptable use.',
+    sections: [
+      ['Technical information', 'Examples are educational. Review current vendor documentation and test commands outside production before applying them to your environment.'],
+      ['Content and availability', 'Original articles may be linked and briefly quoted with attribution. Content can be corrected, moved, or removed as platforms change.'],
+      ['Acceptable use', 'Do not abuse form endpoints, bypass security controls, interfere with operation, or submit unlawful or confidential third-party material.']
+    ]
   }
 ];
 
@@ -409,7 +434,7 @@ function renderStaticPageRoot(page, posts) {
     return `<div id="root">
       <main data-prerendered="static-page">
         <section class="relative flex min-h-[500px] items-center overflow-hidden bg-black text-white">
-          <img src="/images/site/devops-operations-hero.jpg" alt="Cloud infrastructure operations workspace" class="absolute inset-0 h-full w-full object-cover" />
+          <img src="/images/site/devops-operations-hero.jpg" srcset="/images/site/devops-operations-hero-960.jpg 960w, /images/site/devops-operations-hero-1440.jpg 1440w, /images/site/devops-operations-hero.jpg 1920w" sizes="100vw" alt="Cloud infrastructure operations workspace" width="1920" height="1053" loading="eager" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
           <div class="absolute inset-0 bg-black/60"></div>
           <header class="container relative mx-auto max-w-6xl px-4">
             <p class="mb-5 text-xs font-semibold uppercase text-cyan-300">Production-minded DevOps notes</p>
@@ -449,6 +474,15 @@ function renderStaticPageRoot(page, posts) {
             <figcaption class="mt-3 text-xs text-muted-foreground">Engineering reliable cloud systems and documenting the decisions behind them.</figcaption>
           </figure>
         </header>
+      </main>
+    </div>`;
+  }
+
+  if (page.sections) {
+    return `<div id="root">
+      <main data-prerendered="static-page" class="container mx-auto max-w-4xl px-4 py-16">
+        <header class="border-b pb-8"><h1 class="text-4xl font-bold md:text-5xl">${htmlEscape(page.heading)}</h1><p class="mt-4 text-muted-foreground">${htmlEscape(page.body)}</p></header>
+        <div class="mt-10">${page.sections.map(([heading, body]) => `<section class="mb-8"><h2 class="text-2xl font-semibold">${htmlEscape(heading)}</h2><p class="mt-3">${htmlEscape(body)}</p></section>`).join('')}</div>
       </main>
     </div>`;
   }

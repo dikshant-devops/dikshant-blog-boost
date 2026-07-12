@@ -29,10 +29,10 @@ export const BlogCard = memo(({ post, variant = "default" }: BlogCardProps) => {
   const isCompact = variant === "compact";
 
   return (
-    <article className={`group h-full border-border ${isCompact ? "border-b py-5 last:border-b-0" : "rounded-md border bg-card"}`}>
+    <article className={`group border-border ${isCompact ? "border-b py-5 last:border-b-0" : "h-full rounded-md border bg-card"}`}>
       <Link
         to={`/blog/${post.id}`}
-        className={`flex h-full ${isCompact ? "gap-4" : "flex-col p-5 md:p-6"}`}
+        className={`flex ${isCompact ? "gap-4" : "h-full flex-col p-5 md:p-6"}`}
         aria-label={post.title}
       >
         <div className={`flex flex-1 flex-col ${isFeatured ? "justify-between" : ""}`}>

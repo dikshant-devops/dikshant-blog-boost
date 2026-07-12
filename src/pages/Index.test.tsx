@@ -37,6 +37,11 @@ describe('Index Page', () => {
     renderIndex();
     expect(screen.getByRole('heading', { name: 'Tech With Dikshant' })).toBeInTheDocument();
     expect(screen.getByText(/Production-minded DevOps notes/)).toBeInTheDocument();
+    const hero = screen.getByRole('img', { name: /cloud infrastructure operations workspace/i });
+    expect(hero).toHaveAttribute('width', '1920');
+    expect(hero).toHaveAttribute('height', '1053');
+    expect(hero).toHaveAttribute('fetchpriority', 'high');
+    expect(hero.getAttribute('srcset')).toContain('devops-operations-hero-960.jpg 960w');
   });
 
   it('renders primary reading and author CTAs', () => {
@@ -59,6 +64,8 @@ describe('Index Page', () => {
 
     const skeletons = document.querySelectorAll('.animate-pulse');
     expect(skeletons.length).toBeGreaterThan(0);
+    const latest = screen.getByRole('region', { name: 'Latest field notes' });
+    expect(latest.querySelectorAll('.h-auto')).toHaveLength(2);
   });
 
   it('displays only 3 featured posts (not all 4)', async () => {

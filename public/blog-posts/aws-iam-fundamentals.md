@@ -10,10 +10,9 @@ playlist: "AWS IAM Foundations"
 playlistOrder: 1
 playlistOnly: true
 difficulty: "Beginner"
-image: "/og-default.jpg"
+image: "/images/social/security.png"
 tags: ["AWS", "Cloud", "Security"]
 tools: ["AWS IAM", "AWS CLI", "IAM Access Analyzer"]
-readTime: "9 min read"
 ---
 
 AWS Identity and Access Management sits on the authorization path for almost every AWS API request. The useful way to learn it is not to memorize policy types. Start with the request AWS must decide: **who is calling, which action are they attempting, which resource is targeted, and which policies apply to that context?**
@@ -180,4 +179,3 @@ Inactive access is still attack surface. Use last-accessed data, Access Analyzer
 - [When to use IAM identities and roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/when-to-use-iam.html)
 - [Security best practices in IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
 - [Using IAM Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html)
-

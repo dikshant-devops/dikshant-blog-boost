@@ -4,6 +4,7 @@ import { readFile, readdir, stat } from 'fs/promises';
 import { gzipSync } from 'zlib';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { fromMarkdown } from 'mdast-util-from-markdown';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -20,6 +21,46 @@ function count(html, pattern) {
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
+}
+
+export function collectMarkdownImageUrls(markdown) {
+  const urls = [];
+  const visit = (node) => {
+    if (node?.type === 'image' && typeof node.url === 'string') urls.push(node.url);
+    if (Array.isArray(node?.children)) node.children.forEach(visit);
+  };
+  visit(fromMarkdown(markdown));
+  return urls;
+}
+
+export function assertNoEditorArtifacts(markdown, fileName) {
+  const forbidden = [/<\/?lov-/i, /docs\.lovable\.dev/i];
+  for (const pattern of forbidden) {
+    assert(!pattern.test(markdown), `${fileName}: contains editor-specific published content`);
+  }
+  assert(!/[ \t]+$/m.test(markdown), `${fileName}: contains trailing whitespace`);
+}
+
+async function verifyMarkdownSources(posts) {
+  for (const post of posts) {
+    const sourcePath = join(PUBLIC, 'blog-posts', post.fileName);
+    const markdown = await readFile(sourcePath, 'utf8');
+    assertNoEditorArtifacts(markdown, post.fileName);
+
+    for (const imageUrl of collectMarkdownImageUrls(markdown)) {
+      if (/^(?:https?:|data:)/i.test(imageUrl)) continue;
+      const cleanPath = decodeURIComponent(imageUrl.split(/[?#]/, 1)[0]);
+      const assetPath = cleanPath.startsWith('/')
+        ? join(PUBLIC, cleanPath.slice(1))
+        : resolve(dirname(sourcePath), cleanPath);
+      assert(assetPath.startsWith(PUBLIC), `${post.fileName}: image escapes the public directory: ${imageUrl}`);
+      try {
+        await stat(assetPath);
+      } catch {
+        throw new Error(`${post.fileName}: missing local image: ${imageUrl}`);
+      }
+    }
+  }
 }
 
 async function verifyHtmlFile(path, expectedMarker, expectedCanonical) {
@@ -46,9 +87,13 @@ export async function verifyBuild() {
   assert(posts.every(post => !Object.hasOwn(post, 'searchText')), 'Listing index contains full article search text');
   assert(posts.every(post => !Object.hasOwn(post, 'headings')), 'Listing index contains article heading details');
   assert(posts.every(post => !Object.hasOwn(post, 'series')), 'Listing index contains deprecated series metadata');
-  assert(searchIndex.length === posts.length, 'Search index and listing index have different post counts');
+  assert(searchIndex.version === 1, 'Unsupported search index version');
+  assert(Array.isArray(searchIndex.documents) && searchIndex.documents.length === posts.length, 'Search index and listing index have different post counts');
+  assert(searchIndex.documents.every(document => typeof document.id === 'string' && typeof document.terms === 'string' && typeof document.boost === 'string'), 'Search index contains invalid documents');
+  assert(!searchIndex.documents.some(document => Object.hasOwn(document, 'searchText')), 'Search index contains unbounded article text');
   assert(!/^\/\*\s+/m.test(redirects), 'Catch-all 200 rewrite would create soft 404s');
   assert(redirects.includes('/series/:slug /playlists/:slug 301'), 'Legacy series redirect is missing');
+  await verifyMarkdownSources(posts);
 
   const listingBytes = (await stat(join(PUBLIC, 'blog-posts-index.json'))).size;
   const searchBytes = (await stat(join(PUBLIC, 'blog-search-index.json'))).size;
@@ -59,6 +104,9 @@ export async function verifyBuild() {
   assert((await stat(socialImage)).size <= 300_000, 'Default social image exceeds 300 KB');
   const homepageHero = join(PUBLIC, 'images', 'site', 'devops-operations-hero.jpg');
   assert((await stat(homepageHero)).size <= 300_000, 'Homepage hero image exceeds 300 KB');
+  for (const [file, maxBytes] of [['devops-operations-hero-960.jpg', 100_000], ['devops-operations-hero-1440.jpg', 180_000]]) {
+    assert((await stat(join(PUBLIC, 'images', 'site', file))).size <= maxBytes, `${file} exceeds ${maxBytes} bytes`);
+  }
   const authorPortrait = join(PUBLIC, 'images', 'about', 'dikshant-rai.jpg');
   assert((await stat(authorPortrait)).size <= 250_000, 'Author portrait exceeds 250 KB');
 
@@ -73,7 +121,7 @@ export async function verifyBuild() {
     'https://techwithdikshant.com/blog'
   );
 
-  for (const route of ['about', 'newsletter', 'connect']) {
+  for (const route of ['about', 'newsletter', 'connect', 'privacy', 'terms']) {
     await verifyHtmlFile(
       join(DIST, route, 'index.html'),
       'data-prerendered="static-page"',
@@ -97,6 +145,9 @@ export async function verifyBuild() {
       ? post.image
       : `https://techwithdikshant.com${post.image}`;
     assert(html.includes(socialUrl), `${post.id}: social image missing`);
+    if (!post.image.startsWith('http')) {
+      assert((await stat(join(PUBLIC, post.image.replace(/^\/+/, '')))).size <= 300_000, `${post.id}: social image exceeds 300 KB`);
+    }
     assert(sitemap.includes(`<loc>${canonical}</loc>`), `${post.id}: missing from sitemap`);
     if (post.playlistOnly) {
       assert(!rss.includes(`<link>${canonical}</link>`), `${post.id}: playlist-only article leaked into RSS`);

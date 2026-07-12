@@ -51,7 +51,7 @@ const Newsletter = () => {
 
         <div className="mt-8 flex items-start gap-3 text-sm text-muted-foreground">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <p>Your address is used only for this newsletter. Every email includes an unsubscribe option.</p>
+          <p>Your address is processed by Beehiiv for this newsletter, and signup is protected by Cloudflare Turnstile. Every email includes an unsubscribe option. <a href="/privacy" className="font-medium text-foreground underline underline-offset-4">Privacy details</a>.</p>
         </div>
       </div>
     </div>

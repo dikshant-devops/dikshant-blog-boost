@@ -16,6 +16,7 @@ const About = () => {
     description: "Learn about Dikshant Rai's work as a Sr Site Reliability Engineer, technical focus, and practical writing approach.",
     keywords: "Dikshant Rai, Sr Site Reliability Engineer, SRE, DevOps, cloud infrastructure",
     type: "profile",
+    image: "/images/about/dikshant-rai.jpg",
     url: `${window.location.origin}/about`
   });
 

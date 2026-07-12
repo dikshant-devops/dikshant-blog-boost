@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle, Mail } from "lucide-react";
+import { useTurnstile } from "@/hooks/useTurnstile";
+import { Label } from "@/components/ui/label";
 
 interface NewsletterSignupProps {
   className?: string;
@@ -15,31 +17,33 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [subscriptionStep, setSubscriptionStep] = useState<'form' | 'success'>('form');
+  const [statusMessage, setStatusMessage] = useState("");
+  const emailId = useId();
   const { toast } = useToast();
+  const { containerRef, prepare, removeWidget, verify } = useTurnstile("newsletter_subscribe");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
 
     setIsLoading(true);
+    setStatusMessage("");
     
     try {
+      const turnstileToken = await verify();
       const response = await fetch('/newsletter-subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email,
+          email,
+          turnstileToken,
         }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ success: false }));
+      if (!response.ok) throw new Error(data.error || "The subscription request could not be completed.");
 
       if (response.ok && data.success) {
         setSubscriptionStep('success');
@@ -49,6 +53,8 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
           description: "Check your email to confirm your subscription.",
         });
         setEmail("");
+        setStatusMessage("Subscription request accepted. Check your inbox to confirm.");
+        removeWidget();
       } else {
         toast({
           title: "Subscription failed",
@@ -57,9 +63,11 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
         });
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Please try again later.";
+      setStatusMessage(message);
       toast({
-        title: "Network error",
-        description: "Please check your connection and try again.",
+        title: "Subscription failed",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -78,11 +86,14 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
       <>
         <div className={className}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
+            <Label htmlFor={emailId} className="sr-only">Email address</Label>
             <Input
+              id={emailId}
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={prepare}
               required
               aria-label="Email address"
               className="h-11 flex-1 bg-background"
@@ -91,6 +102,8 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
               {isLoading ? "Subscribing..." : "Subscribe"}
             </Button>
           </form>
+          <div ref={containerRef} className="mt-2 flex justify-center" />
+          <p className="sr-only" role="status" aria-live="polite">{statusMessage}</p>
           <p className="mt-3 text-xs text-muted-foreground">No spam. Unsubscribe at any time.</p>
         </div>
 
@@ -101,12 +114,12 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <CheckCircle className="w-5 h-5" />
-                    Successfully Subscribed!
+                    Check your inbox
                   </DialogTitle>
                 </DialogHeader>
                 <div className="text-center space-y-4">
                   <p className="text-muted-foreground">
-                    Thank you for subscribing! You'll receive newsletters from newsletter@techwithdikshant.com
+                    Your subscription request was accepted. Future issues will come from newsletter@techwithdikshant.com.
                   </p>
                   <p className="text-sm text-muted-foreground">
                     Please check your email to confirm your subscription.
@@ -136,13 +149,17 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
           </p>
         </div>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <Label htmlFor={emailId}>Email address</Label>
             <Input
+              id={emailId}
               type="email"
               placeholder="Enter your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={prepare}
               required
             />
+            <div ref={containerRef} className="flex justify-center" />
             <Button
               type="submit"
               className="w-full"
@@ -151,6 +168,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
               {isLoading ? "Subscribing..." : "Subscribe to Newsletter"}
             </Button>
           </form>
+        <p className="sr-only" role="status" aria-live="polite">{statusMessage}</p>
         <p className="mt-3 text-center text-xs text-muted-foreground">No spam. Unsubscribe at any time.</p>
       </div>
 
@@ -161,12 +179,12 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
                   <CheckCircle className="w-5 h-5" />
-                  Successfully Subscribed!
+                  Check your inbox
                 </DialogTitle>
               </DialogHeader>
               <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
-                  Thank you for subscribing! You'll receive newsletters from newsletter@techwithdikshant.com
+                  Your subscription request was accepted. Future issues will come from newsletter@techwithdikshant.com.
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Please check your email to confirm your subscription.

@@ -1,14 +1,13 @@
 ---
 title: "Essential Git Commands: A Visual Guide for Developers"
-excerpt: "Master Git with this comprehensive visual guide covering the most important commands every developer needs to know daily."
+excerpt: "Use Git's core commands with concrete repository states, safe recovery steps, branch workflows, and verification examples."
 date: "2024-01-20"
-updatedDate: "2024-01-20"
+updatedDate: "2026-07-12"
 author: "Dikshant Rai"
 category: "Developer Tools"
 platform: ""
 difficulty: "Beginner"
-image: "/og-default.jpg"
-readTime: "10 min read"
+image: "/images/social/git.png"
 tags: ["Git", "Version Control", "Developer Tools", "DevOps", "Command Line"]
 tools: ["Git"]
 ---
@@ -59,9 +58,7 @@ Initialized empty Git repository in /path/to/your/project/.git/
 git status
 ```
 
-The `git status` command is your best friend when working with Git. It shows you exactly what's happening in your repository at any moment.
-
-![Git Status Screenshot](/src/assets/git-status-screenshot.png)
+`git status` shows the active branch and separates staged, unstaged, and untracked paths. Run it before a commit or recovery command to confirm the repository state.
 
 **Sample Output:**
 ```
@@ -82,10 +79,7 @@ Untracked files:
         src/utils/helpers.ts
 ```
 
-**Color-coded meaning:**
-- 🟢 **Green**: Staged changes (ready to commit)
-- 🔴 **Red**: Modified files (not staged)
-- ⚪ **White**: Untracked files
+Color depends on terminal and Git configuration. Read the section labels rather than relying on a particular color scheme.
 
 ### 2. Adding Files to Staging Area
 
@@ -134,7 +128,7 @@ git commit -m "updated stuff"
 **Visual Timeline After Commit:**
 ```
 * 2f3a1b8 (HEAD -> main) Add user authentication feature
-* 8c7d4e2 Fix navigation menu styling  
+* 8c7d4e2 Fix navigation menu styling
 * 1a5b9c3 Initial project setup
 ```
 
@@ -144,21 +138,19 @@ git commit -m "updated stuff"
 git log
 ```
 
-![Git Log Graph Screenshot](/src/assets/git-log-graph-screenshot.png)
-
 **Sample Output:**
 ```
-commit 2f3a1b8d9e7c6f5a4b3c2d1e0f9g8h7i (HEAD -> main)
+commit 2f3a1b8d9e7c6f5a4b3c2d1e0f9a8b7c6d5e4f3a (HEAD -> main)
 Author: John Doe <john@example.com>
 Date:   Mon Jan 20 14:30:25 2024 +0100
 
     Add user authentication feature
-    
+
     - Implement login/logout functionality
     - Add JWT token validation
     - Create protected routes
 
-commit 8c7d4e2f1a5b9c3d7e6f0g9h8i7j
+commit 8c7d4e2f1a5b9c3d7e6f0a9b8c7d6e5f4a3b2c1d
 Author: John Doe <john@example.com>
 Date:   Mon Jan 20 10:15:10 2024 +0100
 
@@ -186,10 +178,10 @@ git log --oneline
 git branch feature/user-profile
 
 # Switch to branch
-git checkout feature/user-profile
+git switch feature/user-profile
 
 # Create and switch in one command
-git checkout -b feature/user-profile
+git switch -c feature/user-profile
 ```
 
 **Visual Branch Representation:**
@@ -205,8 +197,6 @@ feature/profile    *---*
 git branch
 ```
 
-![Git Branch Screenshot](/src/assets/git-branch-screenshot.png)
-
 **Output:**
 ```
 * feature/user-profile
@@ -220,7 +210,7 @@ The `*` indicates your current branch.
 
 ```bash
 # Switch to main branch
-git checkout main
+git switch main
 
 # Merge feature branch
 git merge feature/user-profile
@@ -334,16 +324,13 @@ After:  Working Dir → [Empty]        → Repository
 ### Discarding Local Changes
 
 ```bash
-# Discard changes to specific file
-git checkout -- filename.js
-
-# Modern syntax
+# Discard changes to a specific file
 git restore filename.js
 ```
 
 **Warning Message:**
 ```
-⚠️  This will permanently discard your changes!
+This will permanently discard the selected working-tree changes.
 ```
 
 ### Reverting Commits
@@ -377,8 +364,6 @@ git diff --staged
 git diff main feature/new-feature
 ```
 
-![Git Diff Screenshot](/src/assets/git-diff-screenshot.png)
-
 **Sample Diff Output:**
 ```diff
 diff --git a/src/components/Header.tsx b/src/components/Header.tsx
@@ -396,9 +381,9 @@ index 1a2b3c4..5d6e7f8 100644
 ```
 
 **Legend:**
-- 🟢 **Green (+)**: Added lines
-- 🔴 **Red (-)**: Removed lines
-- ⚪ **White**: Unchanged context
+- Lines prefixed with `+` were added.
+- Lines prefixed with `-` were removed.
+- Unprefixed lines provide surrounding context.
 
 ## Stashing Changes
 
@@ -409,7 +394,7 @@ index 1a2b3c4..5d6e7f8 100644
 git stash
 
 # Stash with message
-git stash save "WIP: working on user profile"
+git stash push -m "WIP: working on user profile"
 ```
 
 **Visual Stash Process:**
@@ -454,7 +439,7 @@ git rebase -i HEAD~3
 **Interactive Editor Opens:**
 ```
 pick 1a2b3c4 First commit message
-pick 5d6e7f8 Second commit message  
+pick 5d6e7f8 Second commit message
 pick 9g0h1i2 Third commit message
 
 # Commands:
@@ -529,7 +514,7 @@ git commit -m "docs(readme): update installation instructions"
 feature/user-authentication
 feature/payment-integration
 
-# Bug fix branches  
+# Bug fix branches
 bugfix/login-validation
 hotfix/security-patch
 
@@ -542,7 +527,7 @@ release/v1.2.0
 ```bash
 # Daily workflow
 git pull origin main          # Get latest changes
-git checkout -b feature/xyz   # Create feature branch
+git switch -c feature/xyz     # Create feature branch
 # ... make changes ...
 git add .                     # Stage changes
 git commit -m "descriptive message"  # Commit
@@ -557,7 +542,7 @@ git push -u origin feature/xyz       # Push branch
 ```bash
 # You're on main but made changes
 git stash                     # Save changes
-git checkout -b feature-branch # Create new branch  
+git switch -c feature-branch   # Create new branch
 git stash pop                 # Apply changes
 ```
 
@@ -576,7 +561,7 @@ When conflicts occur:
 <<<<<<< HEAD
 Your current changes
 =======
-Incoming changes  
+Incoming changes
 >>>>>>> feature-branch
 ```
 
@@ -612,7 +597,7 @@ git rev-list --objects --all | git cat-file --batch-check='%(objecttype) %(objec
 
 ```bash
 # Restore deleted file
-git checkout HEAD -- deleted-file.js
+git restore --source=HEAD -- deleted-file.js
 
 # Find when file was deleted
 git log --oneline --follow -- deleted-file.js
@@ -646,7 +631,7 @@ git lg        # Beautiful log graph
 These essential Git commands form the foundation of effective version control. Practice them regularly to build muscle memory and confidence. Remember:
 
 1. **Commit often** with descriptive messages
-2. **Use branches** for features and experiments  
+2. **Use branches** for features and experiments
 3. **Pull before pushing** to avoid conflicts
 4. **Review changes** before committing
 5. **Keep commits focused** on single changes
@@ -655,4 +640,7 @@ Master these commands, and you'll be well-equipped to handle any Git workflow sc
 
 ---
 
-*Ready to level up your Git skills? Try our interactive Git tutorial series and join our developer community for more advanced techniques!*
+## References
+
+- [Git reference](https://git-scm.com/docs)
+- [Pro Git book](https://git-scm.com/book/en/v2)

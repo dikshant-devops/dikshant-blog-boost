@@ -90,12 +90,15 @@ describe('Blog Page', () => {
     vi.clearAllMocks();
     vi.mocked(markdownLoader.loadMarkdownPosts).mockResolvedValue(mockPosts);
     vi.mocked(markdownLoader.loadBlogSearchIndex).mockResolvedValue({
-      'docker-post': 'Docker content here container runtime',
-      'kubernetes-post': 'Kubernetes content here pod scheduling',
-      'cicd-post': 'CI/CD content here release automation',
-      'gcp-cloud-armor': 'GCP content here edge policy',
-      'gcp-iam-notes': 'IAM content here identity policy',
-      'gcp-iam-playlist-guide': 'Service account bindings and least privilege'
+      version: 1,
+      documents: [
+        { id: 'docker-post', terms: 'docker content container runtime', boost: '' },
+        { id: 'kubernetes-post', terms: 'kubernete content pod schedul', boost: '' },
+        { id: 'cicd-post', terms: 'ci cd content release automate', boost: '' },
+        { id: 'gcp-cloud-armor', terms: 'gcp content edge policy', boost: '' },
+        { id: 'gcp-iam-notes', terms: 'iam content identity policy', boost: '' },
+        { id: 'gcp-iam-playlist-guide', terms: 'service account bind least privilege', boost: '' },
+      ],
     });
   });
 
@@ -114,6 +117,7 @@ describe('Blog Page', () => {
       expect(screen.getByText('Kubernetes Introduction')).toBeInTheDocument();
       expect(screen.getByText('CI/CD Pipeline Setup')).toBeInTheDocument();
     });
+    expect(document.body).toHaveTextContent('6 searchable articles · 5 in main feed');
   });
 
   it('should display search input', async () => {

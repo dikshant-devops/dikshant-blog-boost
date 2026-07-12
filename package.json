@@ -15,6 +15,9 @@
     "build:dev": "vite build --mode development",
     "content:index": "node scripts/generate-blog-manifest.js",
     "verify:build": "node scripts/verify-build.js",
+    "typecheck": "tsc --noEmit",
+    "functions:build": "mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler.log wrangler pages functions build functions --outdir .wrangler/pages-functions --project-directory . --build-output-directory dist",
+    "release:check": "git diff --check && npm run lint && npm run typecheck && npm test && npm run build && npm run functions:build && npm audit",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
@@ -106,6 +109,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^8.1.4",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.110.0"
   }
 }

@@ -68,6 +68,22 @@ describe('BlogCard', () => {
     expect(link).toHaveAttribute('aria-label', 'Test Blog Post Title');
   });
 
+  it('uses intrinsic height for compact cards so stacked cards cannot overflow their section', () => {
+    const { container } = renderWithRouter(<BlogCard post={mockPost} variant="compact" />);
+    const article = container.querySelector('article');
+    const link = screen.getByRole('link');
+
+    expect(article).not.toHaveClass('h-full');
+    expect(link).not.toHaveClass('h-full');
+  });
+
+  it('keeps full-height alignment for regular cards', () => {
+    const { container } = renderWithRouter(<BlogCard post={mockPost} />);
+
+    expect(container.querySelector('article')).toHaveClass('h-full');
+    expect(screen.getByRole('link')).toHaveClass('h-full');
+  });
+
   it('should handle posts with single tag', () => {
     const singleTagPost: BlogPost = {
       ...mockPost,

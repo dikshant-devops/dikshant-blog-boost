@@ -114,6 +114,54 @@ describe('useSEO', () => {
     expect(contents).toContain('K8s');
   });
 
+  it('removes every article-only meta property on a website route', () => {
+    for (const property of ['article:published_time', 'article:modified_time', 'article:author', 'article:tag']) {
+      const meta = document.createElement('meta');
+      meta.setAttribute('property', property);
+      meta.content = 'stale article value';
+      document.head.appendChild(meta);
+    }
+
+    renderHook(() => useSEO({ title: 'About', description: 'About page', type: 'profile' }));
+
+    expect(document.querySelector('meta[property^="article:"]')).toBeNull();
+  });
+
+  it('replaces stale article schema with WebPage schema', () => {
+    const stale = document.createElement('script');
+    stale.type = 'application/ld+json';
+    stale.setAttribute('data-structured-data', 'article');
+    stale.textContent = JSON.stringify({ '@type': 'BlogPosting' });
+    document.head.appendChild(stale);
+
+    renderHook(() => useSEO({ title: 'Newsletter', description: 'Newsletter page', type: 'website' }));
+
+    const scripts = document.querySelectorAll('script[data-structured-data]');
+    expect(scripts).toHaveLength(1);
+    expect(scripts[0]).toHaveAttribute('data-structured-data', 'webpage');
+    expect(JSON.parse(scripts[0].textContent || '{}')['@type']).toBe('WebPage');
+  });
+
+  it('creates a complete ProfilePage schema', () => {
+    renderHook(() => useSEO({
+      title: 'About Dikshant Rai',
+      description: 'Author profile',
+      type: 'profile',
+      image: '/images/about/dikshant-rai.jpg',
+      url: 'https://techwithdikshant.com/about',
+    }));
+
+    const script = document.querySelector('script[data-structured-data="webpage"]');
+    const schema = JSON.parse(script?.textContent || '{}');
+    expect(schema['@type']).toBe('ProfilePage');
+    expect(schema.mainEntity).toMatchObject({
+      '@type': 'Person',
+      name: 'Dikshant Rai',
+      jobTitle: 'Sr Site Reliability Engineer',
+      url: 'https://techwithdikshant.com/about',
+    });
+  });
+
   it('uses the full default author name when not provided', () => {
     renderHook(() => useSEO({ title: 'Default', description: 'desc' }));
 
@@ -138,6 +186,42 @@ describe('useSEO', () => {
 });
 
 describe('useArticleStructuredData', () => {
+  it('clears article metadata and schema when navigation reaches a static page', () => {
+    const { rerender } = renderHook(
+      ({ article }) => {
+        useSEO(article ? {
+          title: 'Article',
+          description: 'Article description',
+          type: 'article',
+          publishedTime: '2026-01-01',
+          modifiedTime: '2026-01-02',
+          author: 'Dikshant Rai',
+          tags: ['GCP'],
+        } : {
+          title: 'About',
+          description: 'About page',
+          type: 'profile',
+        });
+        useArticleStructuredData(article ? {
+          title: 'Article',
+          description: 'Article description',
+          author: 'Dikshant Rai',
+          datePublished: '2026-01-01',
+        } : null);
+      },
+      { initialProps: { article: true } },
+    );
+
+    expect(document.querySelector('script[data-structured-data="article"]')).toBeTruthy();
+    expect(document.querySelector('meta[property="article:published_time"]')).toBeTruthy();
+
+    rerender({ article: false });
+
+    expect(document.querySelector('script[data-structured-data="article"]')).toBeNull();
+    expect(document.querySelector('script[data-structured-data="webpage"]')).toBeTruthy();
+    expect(document.querySelector('meta[property^="article:"]')).toBeNull();
+  });
+
   it('creates a JSON-LD script element', () => {
     renderHook(() => useArticleStructuredData({
       title: 'Article Title',

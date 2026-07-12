@@ -1,271 +1,168 @@
 import { z } from 'zod';
 
-// Environment interface for TypeScript support
+interface RateLimiter {
+  limit: (options: { key: string }) => Promise<{ success: boolean }>;
+}
+
 interface Env {
   SHEETDB_API_URL: string;
   TURNSTILE_SECRET_KEY: string;
-  RATE_LIMIT_MAX_REQUESTS: string;
-  RATE_LIMIT_WINDOW_MS: string;
+  TURNSTILE_ALLOWED_HOSTNAMES?: string;
+  CONTACT_RATE_LIMITER?: RateLimiter;
 }
 
-// Zod validation schema for contact form
+const MAX_BODY_BYTES = 8_192;
+const TURNSTILE_ACTION = 'contact_submit';
+const PRODUCTION_ORIGINS = ['https://techwithdikshant.com'];
+const LOCAL_ORIGIN_PATTERN = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/;
+
 const ContactSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
-  email: z.string().email('Invalid email address').max(255, 'Email is too long'),
-  subject: z.string().min(3, 'Subject must be at least 3 characters').max(200, 'Subject is too long'),
-  message: z.string().min(10, 'Message must be at least 10 characters').max(5000, 'Message is too long'),
-  turnstileToken: z.string().min(1, 'CAPTCHA verification is required')
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
+  email: z.string().trim().toLowerCase().email('Invalid email address').max(254, 'Email is too long'),
+  subject: z.string().trim().min(3, 'Subject must be at least 3 characters').max(200, 'Subject is too long'),
+  message: z.string().trim().min(10, 'Message must be at least 10 characters').max(5000, 'Message is too long'),
+  turnstileToken: z.string().min(1, 'Security verification is required').max(2048, 'Invalid security verification'),
 });
 
-/**
- * Get CORS headers for the response
- */
-function getCorsHeaders(origin?: string | null) {
-  const allowedOrigins = ['https://techwithdikshant.com', 'http://localhost:8080'];
-  const requestOrigin = origin || '';
-
+function corsHeaders(origin?: string | null) {
   return {
-    'Access-Control-Allow-Origin': allowedOrigins.includes(requestOrigin)
-      ? requestOrigin
-      : allowedOrigins[0],
+    'Access-Control-Allow-Origin': origin && isAllowedOriginValue(origin) ? origin : PRODUCTION_ORIGINS[0],
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
   };
 }
 
-/**
- * Verify Cloudflare Turnstile token
- */
-async function verifyTurnstile(
-  token: string,
-  secret: string,
-  ip?: string
-): Promise<boolean> {
+function jsonResponse(request: Request, status: number, payload: Record<string, unknown>, extraHeaders = {}) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(request.headers.get('Origin')), ...extraHeaders },
+  });
+}
+
+function isAllowedOriginValue(origin: string) {
+  return PRODUCTION_ORIGINS.includes(origin) || LOCAL_ORIGIN_PATTERN.test(origin);
+}
+
+function isAllowedOrigin(request: Request) {
+  const origin = request.headers.get('Origin');
+  return !origin || isAllowedOriginValue(origin);
+}
+
+async function verifyTurnstile(token: string, env: Env, ip?: string): Promise<boolean> {
+  if (!env.TURNSTILE_SECRET_KEY) return false;
+
   try {
     const formData = new FormData();
-    formData.append('secret', secret);
+    formData.append('secret', env.TURNSTILE_SECRET_KEY);
     formData.append('response', token);
-    if (ip) {
-      formData.append('remoteip', ip);
-    }
+    if (ip) formData.append('remoteip', ip);
 
     const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
       body: formData,
     });
+    if (!response.ok) return false;
 
-    const data = await response.json() as { success: boolean };
-    return data.success === true;
+    const result = await response.json() as { success?: boolean; action?: string; hostname?: string };
+    const allowedHostnames = (env.TURNSTILE_ALLOWED_HOSTNAMES || 'techwithdikshant.com,www.techwithdikshant.com')
+      .split(',')
+      .map((hostname) => hostname.trim())
+      .filter(Boolean);
+
+    return result.success === true &&
+      result.action === TURNSTILE_ACTION &&
+      typeof result.hostname === 'string' &&
+      allowedHostnames.includes(result.hostname);
   } catch (error) {
-    console.error('Turnstile verification error:', error);
+    console.error('[Contact] Turnstile verification failed:', error);
     return false;
   }
 }
 
-/**
- * Simple rate limiting using in-memory store
- * Note: This is per-worker instance. For distributed rate limiting, use Durable Objects or KV
- */
-const rateLimitStore = new Map<string, { count: number; firstRequest: number }>();
-
-function checkRateLimit(
-  ip: string,
-  maxRequests: number,
-  windowMs: number
-): { allowed: boolean; retryAfter?: number } {
-  const now = Date.now();
-  const key = `ratelimit:${ip}`;
-
-  const existing = rateLimitStore.get(key);
-
-  if (!existing) {
-    rateLimitStore.set(key, { count: 1, firstRequest: now });
-    // Clean up after window expires
-    setTimeout(() => rateLimitStore.delete(key), windowMs);
-    return { allowed: true };
-  }
-
-  const timePassed = now - existing.firstRequest;
-
-  // Window expired, reset counter
-  if (timePassed > windowMs) {
-    rateLimitStore.set(key, { count: 1, firstRequest: now });
-    setTimeout(() => rateLimitStore.delete(key), windowMs);
-    return { allowed: true };
-  }
-
-  // Check if limit exceeded
-  if (existing.count >= maxRequests) {
-    const retryAfter = Math.ceil((windowMs - timePassed) / 1000);
-    return { allowed: false, retryAfter };
-  }
-
-  // Increment counter
-  existing.count++;
-  return { allowed: true };
+export async function onRequestOptions(context: { request: Request }): Promise<Response> {
+  return new Response(null, { status: 204, headers: corsHeaders(context.request.headers.get('Origin')) });
 }
 
-/**
- * POST handler for contact form submissions
- */
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
-  const origin = request.headers.get('Origin');
 
   try {
-    // Parse request body
-    let body;
+    if (!isAllowedOrigin(request)) {
+      return jsonResponse(request, 403, { success: false, error: 'Request origin is not allowed' });
+    }
+
+    const contentLength = Number(request.headers.get('Content-Length') || 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return jsonResponse(request, 413, { success: false, error: 'Request body is too large' });
+    }
+
+    const rawBody = await request.text();
+    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
+      return jsonResponse(request, 413, { success: false, error: 'Request body is too large' });
+    }
+
+    let body: unknown;
     try {
-      body = await request.json();
-    } catch (error) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid JSON in request body'
-      }), {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          ...getCorsHeaders(origin)
-        }
-      });
+      body = JSON.parse(rawBody);
+    } catch {
+      return jsonResponse(request, 400, { success: false, error: 'Invalid JSON in request body' });
     }
 
-    // Validate input with Zod
-    const validationResult = ContactSchema.safeParse(body);
-    if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(err => err.message).join(', ');
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Validation error: ${errors}`
-      }), {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          ...getCorsHeaders(origin)
-        }
-      });
+    const validation = ContactSchema.safeParse(body);
+    if (!validation.success) {
+      const errors = validation.error.issues.map((issue) => issue.message).join(', ');
+      return jsonResponse(request, 400, { success: false, error: `Validation error: ${errors}` });
     }
 
-    const validatedData = validationResult.data;
-
-    // Get client IP address
-    const ip = request.headers.get('CF-Connecting-IP') ||
-               request.headers.get('X-Forwarded-For') ||
-               'unknown';
-
-    // Rate limiting
-    const maxRequests = parseInt(env.RATE_LIMIT_MAX_REQUESTS || '5');
-    const windowMs = parseInt(env.RATE_LIMIT_WINDOW_MS || '3600000'); // 1 hour default
-    const rateLimit = checkRateLimit(ip, maxRequests, windowMs);
-
-    if (!rateLimit.allowed) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Too many requests. Please try again in ${rateLimit.retryAfter} seconds.`
-      }), {
-        status: 429,
-        headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': rateLimit.retryAfter?.toString() || '3600',
-          ...getCorsHeaders(origin)
-        }
-      });
+    if (!env.CONTACT_RATE_LIMITER?.limit || !env.SHEETDB_API_URL || !env.TURNSTILE_SECRET_KEY) {
+      console.error('[Contact] Missing required server configuration');
+      return jsonResponse(request, 500, { success: false, error: 'Server configuration error' });
     }
 
-    // Verify Turnstile token
-    const isValidToken = await verifyTurnstile(
-      validatedData.turnstileToken,
-      env.TURNSTILE_SECRET_KEY,
-      ip
-    );
-
-    if (!isValidToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'CAPTCHA verification failed. Please try again.'
-      }), {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          ...getCorsHeaders(origin)
-        }
-      });
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const rateLimit = await env.CONTACT_RATE_LIMITER.limit({ key: ip });
+    if (!rateLimit.success) {
+      return jsonResponse(
+        request,
+        429,
+        { success: false, error: 'Too many requests. Please try again later.' },
+        { 'Retry-After': '60' },
+      );
     }
 
-    // Prepare data for Google Sheets via SheetDB
-    const timestamp = new Date().toISOString();
-    const userAgent = request.headers.get('User-Agent') || 'unknown';
+    const data = validation.data;
+    if (!await verifyTurnstile(data.turnstileToken, env, ip === 'unknown' ? undefined : ip)) {
+      return jsonResponse(request, 400, { success: false, error: 'Security verification failed. Please try again.' });
+    }
 
-    const sheetData = {
-      data: {
-        Timestamp: timestamp,
-        Name: validatedData.name,
-        Email: validatedData.email,
-        Subject: validatedData.subject,
-        Message: validatedData.message,
-        'IP Address': ip,
-        'User Agent': userAgent
-      }
-    };
-
-    // Forward to SheetDB
     const sheetDbResponse = await fetch(env.SHEETDB_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(sheetData)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        data: {
+          Timestamp: new Date().toISOString(),
+          Name: data.name,
+          Email: data.email,
+          Subject: data.subject,
+          Message: data.message,
+          'IP Address': ip,
+          'User Agent': request.headers.get('User-Agent') || 'unknown',
+        },
+      }),
     });
 
     if (!sheetDbResponse.ok) {
-      console.error('SheetDB error:', await sheetDbResponse.text());
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to save your message. Please try again later.'
-      }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...getCorsHeaders(origin)
-        }
-      });
+      console.error('[Contact] SheetDB request failed:', sheetDbResponse.status);
+      return jsonResponse(request, 502, { success: false, error: 'Failed to save your message. Please try again later.' });
     }
 
-    // Success response
-    return new Response(JSON.stringify({
+    return jsonResponse(request, 200, {
       success: true,
-      message: 'Your message has been received! I\'ll get back to you as soon as possible.'
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getCorsHeaders(origin)
-      }
+      message: "Your message has been received. I'll get back to you as soon as possible.",
     });
-
   } catch (error) {
-    console.error('Contact form error:', error);
-
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An unexpected error occurred. Please try again later.'
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getCorsHeaders(origin)
-      }
-    });
+    console.error('[Contact] Unexpected error:', error);
+    return jsonResponse(request, 500, { success: false, error: 'An unexpected error occurred. Please try again later.' });
   }
-}
-
-/**
- * OPTIONS handler for CORS preflight
- */
-export async function onRequestOptions(context: { request: Request }): Promise<Response> {
-  return new Response(null, {
-    status: 204,
-    headers: getCorsHeaders(context.request.headers.get('Origin'))
-  });
 }

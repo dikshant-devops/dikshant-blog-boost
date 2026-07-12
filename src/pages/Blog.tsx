@@ -12,6 +12,7 @@ import { useCollectionStructuredData, useSEO } from "@/hooks/useSEO";
 import { type BlogPost } from "@/types/blog";
 import { loadBlogSearchIndex, loadMarkdownPosts } from "@/utils/markdownLoader";
 import { collectPlaylists, type PlaylistCollection, supportsPlaylists } from "@/utils/playlists";
+import { rankBlogPosts, type BlogSearchIndex } from "@/utils/blogSearch";
 
 const ARTICLE_PAGE_SIZE = 12;
 const PLAYLIST_DISCOVERY_LIMIT = 6;
@@ -56,15 +57,15 @@ const Blog = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTag, setSelectedTag] = useState(() => searchParams.get("tag") || "");
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [searchIndex, setSearchIndex] = useState<Record<string, string>>({});
+  const [searchIndex, setSearchIndex] = useState<BlogSearchIndex | null>(null);
   const [loading, setLoading] = useState(true);
   const [topicsExpanded, setTopicsExpanded] = useState(false);
   const [visibleCount, setVisibleCount] = useState(ARTICLE_PAGE_SIZE);
 
   useSEO({
-    title: "DevOps Blog - Tutorials & Best Practices | Tech With Dikshant",
-    description: "Explore comprehensive DevOps tutorials covering Docker, Kubernetes, CI/CD, cloud technologies, and automation best practices.",
-    keywords: "DevOps blog, Docker tutorials, Kubernetes guide, CI/CD pipeline, cloud computing, automation, DevOps best practices",
+    title: "DevOps Field Notes | Tech With Dikshant",
+    description: "Practical field notes on GCP, AWS, Kubernetes, Docker, GitHub Actions, networking, and reliability, with commands, tradeoffs, and verification steps.",
+    keywords: "DevOps field notes, GCP, AWS, Kubernetes, Docker, GitHub Actions, networking, site reliability engineering",
     type: "website",
     url: `${window.location.origin}/blog`,
     robots: "index, follow"
@@ -142,23 +143,17 @@ const Blog = () => {
     return counts;
   }, {}), [listingPosts]);
 
-  const filteredPosts = useMemo(() => posts.filter(post => {
-    const searchable = [
-      post.title,
-      post.excerpt,
-      post.category,
-      post.platform,
-      post.playlist,
-      post.series,
-      searchIndex[post.id],
-      ...(post.tags || []),
-      ...(post.tools || [])
-    ].filter(Boolean).join(" ").toLowerCase();
+  const searchScores = useMemo(() => rankBlogPosts(posts, searchIndex, searchTerm), [posts, searchIndex, searchTerm]);
+  const filteredPosts = useMemo(() => {
     const isSearchResult = Boolean(searchTerm.trim());
-    return (isSearchResult || !post.playlistOnly)
-      && searchable.includes(searchTerm.toLowerCase())
-      && (!selectedTag || post.tags.includes(selectedTag));
-  }), [posts, searchIndex, searchTerm, selectedTag]);
+    return posts
+      .filter(post => (isSearchResult || !post.playlistOnly)
+        && searchScores.has(post.id)
+        && (!selectedTag || post.tags.includes(selectedTag)))
+      .sort((left, right) => isSearchResult
+        ? (searchScores.get(right.id) || 0) - (searchScores.get(left.id) || 0)
+        : new Date(right.date).getTime() - new Date(left.date).getTime());
+  }, [posts, searchScores, searchTerm, selectedTag]);
 
   const isUnfiltered = !selectedTag && !searchTerm;
   const visiblePosts = filteredPosts.slice(0, visibleCount);
@@ -181,7 +176,8 @@ const Blog = () => {
           </p>
         </div>
         <div className="text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">{listingPosts.length}</span> published {listingPosts.length === 1 ? "article" : "articles"}
+          <span className="font-semibold text-foreground">{posts.length}</span> searchable {posts.length === 1 ? "article" : "articles"}
+          {posts.length !== listingPosts.length && <> · <span className="font-semibold text-foreground">{listingPosts.length}</span> in main feed</>}
         </div>
       </header>
 

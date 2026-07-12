@@ -1,0 +1,5 @@
+BEEHIIV_API_KEY=replace-with-test-value
+BEEHIIV_PUBLICATION_ID=replace-with-test-value
+SHEETDB_API_URL=https://sheetdb.io/api/v1/replace-with-test-id
+TURNSTILE_SECRET_KEY=replace-with-cloudflare-test-secret
+TURNSTILE_ALLOWED_HOSTNAMES=localhost,127.0.0.1

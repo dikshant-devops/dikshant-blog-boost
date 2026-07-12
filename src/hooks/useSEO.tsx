@@ -14,6 +14,26 @@ interface SEOData {
   robots?: string;
 }
 
+const ARTICLE_META_PROPERTIES = [
+  'article:published_time',
+  'article:modified_time',
+  'article:author',
+  'article:tag',
+];
+
+function upsertStructuredData(key: string, data: object) {
+  const selector = `script[data-structured-data="${key}"]`;
+  const scripts = Array.from(document.querySelectorAll('script[data-structured-data]'));
+  const existing = scripts.find(script => script.matches(selector));
+  scripts.filter(script => script !== existing).forEach(script => script.remove());
+
+  const script = existing || document.createElement('script');
+  script.type = 'application/ld+json';
+  script.setAttribute('data-structured-data', key);
+  script.textContent = JSON.stringify(data);
+  if (!existing) document.head.appendChild(script);
+}
+
 type ArticleStructuredData = {
   title: string;
   description: string;
@@ -73,13 +93,37 @@ export const useSEO = (data: SEOData | null) => {
     ] : []),
   ], [data, imageUrl]);
 
+  const pageStructuredData = useMemo(() => {
+    if (!data || data.type === 'article') return null;
+    const isProfile = data.type === 'profile';
+    const url = data.url || window.location.href;
+    return {
+      '@context': 'https://schema.org',
+      '@type': isProfile ? 'ProfilePage' : 'WebPage',
+      name: data.title,
+      description: data.description,
+      url,
+      ...(isProfile && {
+        mainEntity: {
+          '@type': 'Person',
+          name: 'Dikshant Rai',
+          jobTitle: 'Sr Site Reliability Engineer',
+          image: imageUrl,
+          url,
+        },
+      }),
+    };
+  }, [data, imageUrl]);
+
   useEffect(() => {
     if (!data) return;
 
     // Update document title
     document.title = data.title;
 
-    document.querySelectorAll('meta[property="article:tag"]').forEach(meta => meta.remove());
+    ARTICLE_META_PROPERTIES.forEach(property => {
+      document.querySelectorAll(`meta[property="${property}"]`).forEach(meta => meta.remove());
+    });
 
     metaTags.forEach(tag => {
       const attribute = 'name' in tag ? 'name' : 'property';
@@ -120,7 +164,9 @@ export const useSEO = (data: SEOData | null) => {
       document.head.appendChild(canonical);
     }
     canonical.href = data.url || window.location.href;
-  }, [data, metaTags]);
+
+    if (pageStructuredData) upsertStructuredData('webpage', pageStructuredData);
+  }, [data, metaTags, pageStructuredData]);
 };
 
 export const useArticleStructuredData = (data: ArticleStructuredData | null) => {
@@ -166,16 +212,7 @@ export const useArticleStructuredData = (data: ArticleStructuredData | null) => 
   useEffect(() => {
     if (!structuredData) return;
 
-    document.querySelectorAll('script[data-structured-data]:not([data-structured-data="article"])')
-      .forEach(script => script.remove());
-    const scripts = Array.from(document.querySelectorAll('script[data-structured-data="article"]'));
-    const [existing, ...duplicates] = scripts;
-    duplicates.forEach(script => script.remove());
-    const script = existing || document.createElement('script');
-    script.type = 'application/ld+json';
-    script.setAttribute('data-structured-data', 'article');
-    script.textContent = JSON.stringify(structuredData);
-    if (!existing) document.head.appendChild(script);
+    upsertStructuredData('article', structuredData);
   }, [structuredData]);
 };
 
@@ -201,15 +238,6 @@ export const useCollectionStructuredData = (data: CollectionStructuredData | nul
   useEffect(() => {
     if (!structuredData) return;
 
-    const selector = `script[data-structured-data="${key}"]`;
-    const scripts = Array.from(document.querySelectorAll('script[data-structured-data]'));
-    const existing = scripts.find(script => script.matches(selector));
-    scripts.filter(script => script !== existing).forEach(script => script.remove());
-
-    const script = existing || document.createElement('script');
-    script.type = 'application/ld+json';
-    script.setAttribute('data-structured-data', key);
-    script.textContent = JSON.stringify(structuredData);
-    if (!existing) document.head.appendChild(script);
+    upsertStructuredData(key, structuredData);
   }, [key, structuredData]);
 };

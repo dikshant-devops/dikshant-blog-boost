@@ -6,6 +6,7 @@ import { useTheme } from "next-themes";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -92,6 +93,7 @@ export const Header = () => {
             <SheetContent side="right">
               <SheetHeader>
                 <SheetTitle>Tech With Dikshant</SheetTitle>
+                <SheetDescription className="sr-only">Primary site navigation</SheetDescription>
               </SheetHeader>
               <nav className="flex flex-col space-y-4 mt-6">
                 {navLinks.map((link) => (

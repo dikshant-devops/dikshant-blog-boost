@@ -58,7 +58,7 @@ describe('Admin Page', () => {
     expect(screen.getByLabelText('Title')).toBeInTheDocument();
     expect(screen.getByLabelText('Author')).toBeInTheDocument();
     expect(screen.getByLabelText('Excerpt')).toBeInTheDocument();
-    expect(screen.getByLabelText('Read Time (minutes)')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Read Time (minutes)')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Tags')).toBeInTheDocument();
     expect(screen.getByLabelText('Content (Markdown)')).toBeInTheDocument();
   });

@@ -10,6 +10,8 @@ vi.mock('./pages/Series', () => ({ default: () => <div>Playlist Page</div> }));
 vi.mock('./pages/Newsletter', () => ({ default: () => <div>Newsletter Page</div> }));
 vi.mock('./pages/About', () => ({ default: () => <div>About Page</div> }));
 vi.mock('./pages/Connect', () => ({ default: () => <div>Connect Page</div> }));
+vi.mock('./pages/Privacy', () => ({ default: () => <div>Privacy Page</div> }));
+vi.mock('./pages/Terms', () => ({ default: () => <div>Terms Page</div> }));
 vi.mock('./pages/Admin', () => ({ default: () => <div>Admin Page</div> }));
 vi.mock('./pages/NotFound', () => ({ default: () => <div>Not Found Page</div> }));
 
@@ -89,6 +91,17 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText('Connect Page')).toBeInTheDocument();
     });
+  });
+
+  it('renders privacy and terms routes', async () => {
+    window.history.pushState({}, '', '/privacy');
+    const { unmount } = render(<App />);
+    await waitFor(() => expect(screen.getByText('Privacy Page')).toBeInTheDocument());
+    unmount();
+
+    window.history.pushState({}, '', '/terms');
+    render(<App />);
+    await waitFor(() => expect(screen.getByText('Terms Page')).toBeInTheDocument());
   });
 
   it('renders admin page at /admin route', async () => {

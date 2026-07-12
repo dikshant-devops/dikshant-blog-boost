@@ -35,6 +35,7 @@ describe('Newsletter Page', () => {
 
   it('renders a clear privacy statement instead of an anonymous testimonial', () => {
     render(<Newsletter />);
-    expect(screen.getByText(/used only for this newsletter/i)).toBeInTheDocument();
+    expect(screen.getByText(/processed by Beehiiv for this newsletter/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Privacy details' })).toHaveAttribute('href', '/privacy');
   });
 });

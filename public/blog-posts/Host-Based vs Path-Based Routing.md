@@ -2,127 +2,92 @@
 title: "Host-Based vs Path-Based Routing in Load Balancers"
 excerpt: "Compare host-based and path-based routing patterns for modern load balancers, including use cases, diagrams, and AWS ALB examples."
 date: "2025-01-06"
-updatedDate: "2025-01-06"
+updatedDate: "2026-07-12"
 author: "Dikshant Rai"
 category: "Networking"
 platform: "AWS"
 playlist: "AWS Load Balancing"
 playlistOrder: 1
 difficulty: "Beginner"
-image: "/og-default.jpg"
+image: "/images/social/networking.png"
 tags: ["AWS", "Load Balancer", "Networking", "DevOps"]
 tools: ["Load Balancer"]
-readTime: "3 min read"
 ---
 
-When designing scalable applications, routing strategies play a crucial role in ensuring traffic is directed to the right service. Modern load balancers provide advanced routing mechanisms such as **host-based routing** and **path-based routing**, enabling more flexibility and control.  
+Host- and path-based rules let one application load balancer route requests to different backends. The routing choice affects DNS, certificates, cookies, application paths, and the order in which listener rules must be evaluated.
 
-In this blog, we’ll explore both concepts, their differences, and common use cases.  
+## Host-Based Routing
 
----
+Host-based routing matches the request hostname, normally from the HTTP `Host` header or the HTTP/2 `:authority` pseudo-header. It is useful when services have separate DNS names:
 
-## 🔹 What is Host-Based Routing?  
+- `api.example.com` routes to the API target group.
+- `docs.example.com` routes to the documentation target group.
+- `admin.example.com` routes to an administrative application.
 
-**Host-based routing** (also known as **domain-based routing**) directs traffic based on the **hostname (domain)** specified in the request’s **HTTP Host header**.  
+```text
+api.example.com  ---->  [load balancer]  ---->  [API targets]
+docs.example.com ---->  [load balancer]  ---->  [documentation targets]
+```
 
-For example:  
+Each hostname must resolve to the load balancer. TLS certificates must also cover every hostname presented to the listener. A wildcard certificate may reduce certificate count, but its scope and renewal process still need review.
 
-- `api.example.com` → Routes to the API service  
-- `blog.example.com` → Routes to the blog service  
-- `shop.example.com` → Routes to the e-commerce service  
+## Path-Based Routing
 
-### ✅ Benefits:  
-- Helps run multiple applications under different domains/subdomains.  
-- Simplifies multi-service architecture under a single load balancer.  
-- Commonly used in **microservices** and **multi-tenant applications**.  
+Path-based routing matches the URL path while keeping one hostname:
 
-### 🔹 Diagram: Host-Based Routing  
-Client Request (HTTP Host header)
-|
-v
-+—————+
-| Load Balancer |
-+—————+
-/      |      
-/       |       
-api.example.com  blog.example.com  shop.example.com
-|              |               |
-[API Service]  [Blog Service]  [Shop Service]
+- `example.com/api/*` routes to the API target group.
+- `example.com/docs/*` routes to the documentation target group.
+- `example.com/static/*` routes to the static-content target group.
 
----
+```text
+example.com/api/*    ---->  [load balancer]  ---->  [API targets]
+example.com/docs/*   ---->  [load balancer]  ---->  [documentation targets]
+example.com/static/* ---->  [load balancer]  ---->  [static targets]
+```
 
-## 🔹 Wh
-at is Path-Based Routing?  
+The backend must understand the path it receives. A load balancer does not necessarily remove a prefix such as `/api`; path rewriting is a separate feature and varies by product. Query strings also require explicit conditions when the load balancer supports them.
 
-**Path-based routing** (also known as **URL-based routing**) directs traffic based on the **URL path** in the request.  
+## Choosing Between Them
 
-For example:  
+| Concern | Host based | Path based |
+| --- | --- | --- |
+| Routing key | Hostname | URL path |
+| DNS | One record per hostname | Usually one hostname |
+| TLS | Certificate must cover each hostname | One hostname can use one certificate |
+| Browser isolation | Separate origins | Shared origin unless another control separates applications |
+| Migration fit | Separate products or tenants | Incremental extraction behind one public URL |
 
-- `example.com/api/*` → Routes to the API backend  
-- `example.com/blog/*` → Routes to the blog backend  
-- `example.com/shop/*` → Routes to the e-commerce backend  
+Neither pattern is automatically more scalable. Choose the boundary that matches ownership and browser behavior. Separate hostnames can simplify cookie and Content Security Policy boundaries. Shared-host paths can simplify DNS and preserve public URLs during a migration.
 
-### ✅ Benefits:  
-- Allows multiple services under the **same domain**.  
-- Provides finer-grained routing compared to host-based.  
-- Useful for **monolith-to-microservices migration**, where paths can be redirected to different backends without changing the domain.  
+## Rule Priority and Defaults
 
-### 🔹 Diagram: Path-Based Routing  
-Client Request (HTTP Path)
-|
-v
-+—————+
-| Load Balancer |
-+—————+
-/      |      
-/       |       
-/api/*      /blog/*   /shop/*
-|           |         |
-[API Service] [Blog Service] [Shop Service]
+Most application load balancers evaluate listener rules by priority and use a default action when no rule matches. Specific rules should appear before broad catch-all rules. For example, `/api/admin/*` must be evaluated before `/api/*` when the two paths require different target groups.
 
----
+Define the unmatched-request behavior deliberately. Sending an unknown host or path to the main application can expose a backend that was not intended to handle it. A fixed `404` response is often safer than an accidental default route.
 
-## 🔹 Host-Based vs Path-Based Routing  
+## AWS Application Load Balancer Example
 
-| Feature                  | Host-Based Routing                  | Path-Based Routing                   |
-|--------------------------|--------------------------------------|---------------------------------------|
-| **Routing Decision**     | Based on **hostname/domain**        | Based on **URL path**                 |
-| **Example**              | `api.example.com` → API service     | `example.com/api/` → API service      |
-| **Domain Usage**         | Requires multiple subdomains        | Uses a single domain with paths       |
-| **Best For**             | Multi-domain, multi-service setups  | Single domain with multiple services  |
-| **Flexibility**          | Moderate                            | High (can split requests by path)     |
+An AWS Application Load Balancer listener can combine `host-header` and `path-pattern` conditions. One rule might require host `api.example.com` and path `/v1/*` before forwarding to an API target group. A lower-priority rule can route `/health` separately, and the listener default action can return a fixed response.
 
----
+Before enforcement, verify each rule with requests that should match and requests that should fall through:
 
-## 🔹 Common Use Cases  
+```bash
+curl --resolve api.example.com:443:203.0.113.10 https://api.example.com/v1/status
+curl --resolve unknown.example.com:443:203.0.113.10 https://unknown.example.com/
+```
 
-### Host-Based Routing  
-- SaaS platforms hosting multiple customers with separate domains.  
-- Applications where services need to be clearly separated by domain, e.g., `admin.example.com`, `user.example.com`.  
-- Microservices where each service has its own subdomain.  
+Replace the example address with the test endpoint. Check the selected target group, response status, access logs, and behavior for an unknown host.
 
-### Path-Based Routing  
-- Applications with multiple services under one domain.  
-- Progressive migration from monolith to microservices.  
-- APIs grouped under a single domain with distinct paths.  
+## Production Checklist
 
----
+- Confirm DNS and certificate coverage for every hostname.
+- Document listener-rule priority and the default action.
+- Test overlapping paths and trailing-slash behavior.
+- Decide whether the backend receives or rewrites the matched prefix.
+- Keep authentication and authorization in the application; routing is not an access-control boundary.
+- Monitor target health and load-balancer access logs after a rule change.
 
-## 🔹 Example in AWS Application Load Balancer  
+## References
 
-In AWS ALB:  
-- **Host-based rule**:
-   IF host is api.example.com → Forward to Target Group: API
-- **Path-based rule**:
-  IF path is /blog/* → Forward to Target Group: Blog
-  This flexibility helps deploy complex architectures without requiring separate load balancers for each service.  
-
----
-
-## 🔹 Conclusion  
-
-Both **host-based** and **path-based routing** are powerful mechanisms in load balancers.  
-- Use **host-based routing** when you want to separate services by **domain**.  
-- Use **path-based routing** when you want to serve multiple services under a **single domain**.  
-
-In real-world systems, it’s common to use a **combination of both** for maximum flexibility and scalability.  
+- [AWS ALB listener rules](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-rules.html)
+- [Google Cloud URL maps](https://cloud.google.com/load-balancing/docs/url-map-concepts)
