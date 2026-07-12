@@ -7,11 +7,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { X, Plus, FileText, Calendar } from "lucide-react";
+import { BLOG_CATEGORIES, BLOG_DIFFICULTIES, CLOUD_PLATFORMS, DEVOPS_TOOLS, LEARNING_PATHS } from "@/config/taxonomy";
+import { validateBlogDraft } from "@/lib/blogDraftValidation";
 
 const Admin = () => {
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
+  const [category, setCategory] = useState("DevOps");
+  const [platform, setPlatform] = useState("");
+  const [series, setSeries] = useState("");
+  const [seriesOrder, setSeriesOrder] = useState("");
+  const [difficulty, setDifficulty] = useState("Beginner");
+  const [publishDate, setPublishDate] = useState(new Date().toISOString().split('T')[0]);
+  const [image, setImage] = useState("/og-default.jpg");
+  const [tools, setTools] = useState<string[]>([]);
+  const [currentTool, setCurrentTool] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState("");
   const [author, setAuthor] = useState("Dikshant Sharma");
@@ -29,6 +40,33 @@ const Admin = () => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const addTool = () => {
+    if (currentTool.trim() && !tools.includes(currentTool.trim())) {
+      setTools([...tools, currentTool.trim()]);
+      setCurrentTool("");
+    }
+  };
+
+  const removeTool = (toolToRemove: string) => {
+    setTools(tools.filter(tool => tool !== toolToRemove));
+  };
+
+  const applyLearningPath = (pathTitle: string) => {
+    const path = LEARNING_PATHS.find(item => item.title === pathTitle);
+    if (!path) return;
+
+    setSeries(path.title);
+    if (path.platform === "CI/CD") {
+      setCategory("CI/CD");
+      setPlatform("");
+      setTags(prev => Array.from(new Set([...prev, "CI/CD", "DevOps"])));
+    } else {
+      setCategory("Cloud");
+      setPlatform(path.platform);
+      setTags(prev => Array.from(new Set([...prev, path.platform, "Cloud", "DevOps"])));
+    }
+  };
+
   const generateSlug = (title: string) => {
     return title.toLowerCase()
       .replace(/[^a-z0-9 -]/g, '')
@@ -37,17 +75,42 @@ const Admin = () => {
       .trim();
   };
 
+  const yamlString = (value: string) => JSON.stringify(String(value));
+  const yamlList = (values: string[]) => JSON.stringify(values.map(value => value.trim()).filter(Boolean));
+
   const generateMarkdownFile = () => {
+    const errors = validateBlogDraft({ title, excerpt, content, author, image, tags, series, seriesOrder });
+    if (errors.length > 0) {
+      toast({
+        title: "Fix validation errors",
+        description: errors.join(' '),
+        variant: "destructive"
+      });
+      return;
+    }
+
     const slug = generateSlug(title);
-    const date = new Date().toISOString().split('T')[0];
+    const date = publishDate || new Date().toISOString().split('T')[0];
+    const normalizedSeries = series.trim();
+    const seriesFrontmatter = normalizedSeries
+      ? `series: ${yamlString(normalizedSeries)}
+seriesOrder: ${seriesOrder || 1}
+`
+      : "";
     
     const frontmatter = `---
-title: "${title}"
-excerpt: "${excerpt}"
-date: "${date}"
-author: "${author}"
-tags: [${tags.map(tag => `"${tag}"`).join(', ')}]
-readTime: "${readTime} min read"
+title: ${yamlString(title)}
+excerpt: ${yamlString(excerpt)}
+date: ${yamlString(date)}
+updatedDate: ${yamlString(date)}
+author: ${yamlString(author)}
+category: ${yamlString(category)}
+platform: ${yamlString(platform)}
+${seriesFrontmatter}difficulty: ${yamlString(difficulty)}
+image: ${yamlString(image)}
+tags: ${yamlList(tags)}
+tools: ${yamlList(tools)}
+readTime: ${yamlString(`${readTime} min read`)}
 ---
 
 ${content}`;
@@ -64,8 +127,8 @@ ${content}`;
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Blog post generated! 📝",
-      description: `${slug}.md has been downloaded. Upload it to your public/blog-posts/ directory.`,
+      title: "Blog post generated",
+      description: `${slug}.md is ready for public/blog-posts/.`,
     });
   };
 
@@ -73,6 +136,15 @@ ${content}`;
     setTitle("");
     setExcerpt("");
     setContent("");
+    setCategory("DevOps");
+    setPlatform("");
+    setSeries("");
+    setSeriesOrder("");
+    setDifficulty("Beginner");
+    setPublishDate(new Date().toISOString().split('T')[0]);
+    setImage("/og-default.jpg");
+    setTools([]);
+    setCurrentTool("");
     setTags([]);
     setCurrentTag("");
     setReadTime("5");
@@ -105,6 +177,7 @@ ${content}`;
                 <Input
                   id="title"
                   placeholder="Enter blog post title"
+                  maxLength={65}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
@@ -121,6 +194,23 @@ ${content}`;
             </div>
 
             <div>
+              <Label>Learning Path Template</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {LEARNING_PATHS.map((path) => (
+                  <Button
+                    key={path.title}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyLearningPath(path.title)}
+                  >
+                    {path.title}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div>
               <Label htmlFor="excerpt">Excerpt</Label>
               <Textarea
                 id="excerpt"
@@ -128,6 +218,7 @@ ${content}`;
                 value={excerpt}
                 onChange={(e) => setExcerpt(e.target.value)}
                 rows={3}
+                maxLength={180}
               />
             </div>
 
@@ -143,6 +234,94 @@ ${content}`;
                 />
               </div>
               <div>
+                <Label htmlFor="publishDate">Publish Date</Label>
+                <Input
+                  id="publishDate"
+                  type="date"
+                  value={publishDate}
+                  onChange={(e) => setPublishDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {BLOG_CATEGORIES.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="platform">Platform</Label>
+                <select
+                  id="platform"
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Provider/Platform</option>
+                  {CLOUD_PLATFORMS.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="difficulty">Difficulty</Label>
+                <select
+                  id="difficulty"
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {BLOG_DIFFICULTIES.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="series">Series (optional)</Label>
+                <Input
+                  id="series"
+                  placeholder="Leave blank for a regular article"
+                  value={series}
+                  onChange={(e) => setSeries(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="seriesOrder">Day / Order</Label>
+                <Input
+                  id="seriesOrder"
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                  value={seriesOrder}
+                  onChange={(e) => setSeriesOrder(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="image">Hero / Social Image</Label>
+              <Input
+                id="image"
+                placeholder="/images/blog/my-post.png"
+                value={image}
+                onChange={(e) => setImage(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
                 <Label htmlFor="tags">Tags</Label>
                 <div className="flex gap-2">
                   <Input
@@ -150,19 +329,57 @@ ${content}`;
                     placeholder="Add a tag"
                     value={currentTag}
                     onChange={(e) => setCurrentTag(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                   />
                   <Button type="button" variant="outline" size="sm" onClick={addTag}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
                 {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2" data-testid="tag-badges">
                     {tags.map((tag) => (
                       <Badge key={tag} variant="secondary" className="text-xs">
                         {tag}
                         <button
+                          type="button"
                           onClick={() => removeTag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="tools">Tools</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="tools"
+                    list="tool-options"
+                    placeholder="Add a tool"
+                    value={currentTool}
+                    onChange={(e) => setCurrentTool(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTool())}
+                  />
+                  <datalist id="tool-options">
+                    {DEVOPS_TOOLS.map((tool) => (
+                      <option key={tool} value={tool} />
+                    ))}
+                  </datalist>
+                  <Button type="button" variant="outline" size="sm" onClick={addTool}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {tools.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {tools.map((tool) => (
+                      <Badge key={tool} variant="secondary" className="text-xs">
+                        {tool}
+                        <button
+                          type="button"
+                          onClick={() => removeTool(tool)}
                           className="ml-1 hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
@@ -216,8 +433,9 @@ ${content}`;
                 <li>Fill in all the required fields above</li>
                 <li>Click "Generate Blog Post" to download the markdown file</li>
                 <li>Upload the file to the <code className="bg-muted px-1 rounded">public/blog-posts/</code> directory in your repository</li>
-                <li>Commit and push the changes to your repository</li>
-                <li>The blog post will automatically appear on your website</li>
+                <li>Run <code className="bg-muted px-1 rounded">npm run content:index</code> locally if you want to preview before building</li>
+                <li>Commit and push the markdown file and any custom image assets</li>
+                <li>The production build regenerates the index, sitemap, RSS feed, and article SEO shells automatically</li>
               </ol>
             </div>
             <div>

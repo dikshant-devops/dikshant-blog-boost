@@ -2,11 +2,18 @@
 title: "Getting Started with Docker: A Beginner's Guide"
 excerpt: "Learn the fundamentals of Docker containerization and how to get started with your first container."
 date: "2024-12-15"
+updatedDate: "2024-12-15"
+author: "Dikshant Sharma"
+category: "Containers"
+platform: "Docker"
+series: "Container Fundamentals"
+seriesOrder: 1
+difficulty: "Beginner"
+image: "/og-default.jpg"
 readTime: "8 min read"
-tags: ["Docker", "DevOps", "Containers", "Beginner"]
+tags: ["Docker", "DevOps", "Containers"]
+tools: ["Docker"]
 ---
-
-# Getting Started with Docker: A Beginner's Guide
 
 Docker has revolutionized the way we develop, ship, and run applications. In this comprehensive guide, we'll explore what Docker is, why it's important, and how you can get started with containerization.
 

@@ -3,9 +3,10 @@
 ## Quick Start
 
 1. Create a new `.md` file in the `/public/blog-posts/` directory
-2. Add frontmatter (optional - will be auto-generated if missing)
+2. Add valid frontmatter using the schema below
 3. Write your content in Markdown
-4. Save the file - it will automatically appear on your blog!
+4. Run `npm run content:index` to regenerate the local blog index, sitemap, RSS feed, and robots metadata
+5. Build or deploy - `npm run build` also regenerates these artifacts automatically
 
 ---
 
@@ -27,20 +28,26 @@ All markdown files in this directory are automatically discovered and displayed 
 
 ## Markdown File Format
 
-### With Frontmatter (Recommended)
+### Required Frontmatter
 
 Create a file like `my-awesome-post.md`:
 
 ```markdown
 ---
-title: "My Awesome DevOps Tutorial"
-excerpt: "Learn how to deploy applications with Docker and Kubernetes"
+title: "Deploy Applications with Docker and Kubernetes"
+excerpt: "A tested application deployment guide using Docker and Kubernetes, including verification commands, observed results, and rollback steps."
 date: "2024-01-20"
 readTime: "8 min read"
-tags: ["Docker", "Kubernetes", "DevOps"]
+author: "Dikshant Sharma"
+category: "Cloud"
+platform: "GCP"
+series: "GCP Day by Day"
+seriesOrder: 1
+difficulty: "Beginner"
+tools: ["Cloud Armor", "Load Balancer"]
+tags: ["GCP", "Security", "Cloud Armor"]
+image: "/og-default.jpg"
 ---
-
-# My Awesome DevOps Tutorial
 
 Your content starts here...
 
@@ -53,48 +60,42 @@ This tutorial will teach you...
 First, install Docker...
 ```
 
-### Without Frontmatter (Auto-Generated)
-
-If you don't include frontmatter, the system will automatically generate it:
-
-```markdown
-# Getting Started with Docker
-
-This is my blog post about Docker basics.
-
-Docker is a containerization platform...
-```
-
-**Auto-generated values**:
-- **Title**: Extracted from first heading or filename
-- **Excerpt**: First paragraph (or first 150 characters)
-- **Date**: Current date
-- **Read Time**: Calculated from word count (200 words/minute)
-- **Tags**: Auto-detected from content and filename
-
----
-
 ## Frontmatter Fields
 
-### Required Fields (but all are optional!)
+### Publishing Fields
 
 | Field | Type | Example | Description |
 |-------|------|---------|-------------|
-| `title` | String | `"Docker Guide"` | Post title (quotes required) |
-| `excerpt` | String | `"Learn Docker basics"` | Short description for cards |
-| `date` | String | `"2024-01-20"` | Publication date (YYYY-MM-DD) |
-| `readTime` | String | `"5 min read"` | Estimated reading time |
-| `tags` | Array | `["Docker", "DevOps"]` | Topic tags (see below) |
+| `title` | String | `"Production Docker Deployment Guide"` | Required, unique page title; 30-65 characters |
+| `excerpt` | String | `"A tested Docker deployment..."` | Required meta description; 90-180 characters |
+| `date` | String | `"2024-01-20"` | Required publication date (YYYY-MM-DD) |
+| `updatedDate` | String | `"2024-01-22"` | Last verified update; cannot predate `date` |
+| `author` | String | `"Dikshant Sharma"` | Author displayed in metadata and schema |
+| `readTime` | String | `"5 min read"` | Optional override; otherwise calculated at 200 words/minute |
+| `tags` | Array | `["GCP", "Security"]` | 1-8 unique public navigation tags |
+| `category` | String | `"Cloud"` | Main section: Cloud, CI/CD, Containers, Networking, Security, Developer Tools, Observability, DevOps |
+| `platform` | String | `"GCP"` | Provider/platform for filtering: GCP, AWS, Azure, Kubernetes, Docker |
+| `series` | String | `"GCP Day by Day"` | Optional playlist name inside a selected tag view |
+| `seriesOrder` | Number | `1` | Day/order within the series, only used when `series` is set |
+| `difficulty` | String | `"Beginner"` | Beginner, Intermediate, or Advanced |
+| `tools` | Array | `["GitHub Actions"]` | Tools covered in the article |
+| `image` | String | `"/og-default.jpg"` | JPEG, PNG, or WebP social image; local file must exist |
 
 ### Frontmatter Format Rules
 
 ```yaml
 ---
-title: "Use quotes for titles with special characters"
-excerpt: "Short description goes here"
+title: "Use Quoted Production Titles with Clear Intent"
+excerpt: "Describe the tested problem, implementation approach, observed result, and intended reader in 90 to 180 characters."
 date: "2024-01-20"
 readTime: "5 min read"
 tags: ["Tag1", "Tag2", "Tag3"]
+category: "CI/CD"
+platform: ""
+series: "CI/CD Tooling"
+seriesOrder: 1
+difficulty: "Intermediate"
+tools: ["Jenkins", "GitHub Actions"]
 ---
 ```
 
@@ -104,10 +105,19 @@ tags: ["Tag1", "Tag2", "Tag3"]
 - Use quotes for strings
 - Use array format `["Item1", "Item2"]` for tags
 - Date format: `YYYY-MM-DD`
+- Do not add `# Heading 1` in the body; the frontmatter title is the only page H1
+- Start body sections at `##`, then use `###` without skipping heading levels
+- The body must contain at least 300 words; code blocks do not count toward that minimum
 
 ---
 
 ## Tags System
+
+Tags are the primary reader-facing navigation on `/blog`. If a post has `tags: ["GCP", "Security"]`, selecting the `GCP` tag opens a `GCP Articles` view. Posts with `series` are grouped there so a sequence like `GCP Day by Day` works like a YouTube playlist. Posts without `series` remain normal article cards in the same tag view.
+
+Use tags for top-level discovery. Add `series` plus `seriesOrder` only when the post should belong to a playlist. Leave `series` blank or omit it for a regular standalone article.
+
+The blog displays tags in this order: core topics, cloud platforms, containers, delivery, operations, then developer tools. Keep difficulty values like `Beginner` in the `difficulty` field, not in `tags`.
 
 ### Available Tags
 
@@ -184,10 +194,11 @@ Your blog supports full GFM syntax:
 
 #### Headings
 ```markdown
-# Heading 1
 ## Heading 2
 ### Heading 3
 ```
+
+H1 is intentionally omitted because the page renderer creates it from `title`.
 
 #### Text Formatting
 ```markdown
@@ -276,13 +287,16 @@ Special characters and spaces are automatically converted to hyphens.
 ```markdown
 ---
 title: "Kubernetes Deployment Tutorial for Beginners"
-excerpt: "Learn how to deploy your first application on Kubernetes with step-by-step instructions"
+excerpt: "Deploy a first Kubernetes application with tested manifests, verification commands, observed pod state, and practical rollback guidance."
 date: "2024-01-20"
 readTime: "10 min read"
 tags: ["Kubernetes", "DevOps", "Containers"]
+category: "Containers"
+platform: "Kubernetes"
+difficulty: "Beginner"
+tools: ["Kubernetes", "Docker"]
+image: "/og-default.jpg"
 ---
-
-# Kubernetes Deployment Tutorial for Beginners
 
 In this comprehensive guide, we'll walk through deploying your first application on Kubernetes.
 
@@ -358,10 +372,11 @@ Congratulations! You've deployed your first Kubernetes application. In the next 
 - Your post appears immediately!
 
 ### 2. **SEO Optimization**
-- Use descriptive titles
-- Write compelling excerpts (they appear in meta descriptions)
+- Keep titles between 30 and 65 characters
+- Keep excerpts between 90 and 180 characters
 - Choose relevant tags
-- Include keywords naturally in your content
+- Use specific terminology naturally; do not repeat keywords mechanically
+- Link to primary documentation for version-sensitive facts
 
 ### 3. **Read Time Estimation**
 - Automatically calculated at 200 words/minute
@@ -374,14 +389,24 @@ Congratulations! You've deployed your first Kubernetes application. In the next 
 - Future dates are allowed (for scheduled posts)
 
 ### 5. **Content Length**
-- No minimum or maximum length
-- Excerpts auto-generated at 150 characters
+- A publishable article requires at least 300 non-code words
+- Excerpts are validated at build time
 - Longer content automatically gets longer read time
 
 ### 6. **Images**
 - Place images in `/public/images/`
 - Reference in markdown: `![Alt text](/images/my-image.png)`
 - Supported formats: PNG, JPG, GIF, SVG, WebP
+
+The frontmatter social image is stricter: use JPEG, PNG, or WebP. SVG and GIF are allowed only inside article content.
+
+### 7. **Originality and Evidence**
+- Record the cloud region, tool version, date tested, and relevant prerequisites
+- Include the exact command or configuration you ran and the result you observed
+- Explain failure modes, verification, rollback, cost, and security implications where relevant
+- Add screenshots or redacted output only when they prove a claim
+- Do not publish generated or copied instructions that you have not verified yourself
+- Update `updatedDate` whenever commands or platform behavior are re-tested
 
 ---
 
@@ -414,14 +439,15 @@ Congratulations! You've deployed your first Kubernetes application. In the next 
 
 ```markdown
 ---
-title: "Your Post Title"
-excerpt: "Brief description"
+title: "A Specific Tested DevOps Tutorial Title"
+excerpt: "A specific 90-180 character description of the tested problem, implementation, result, and intended reader."
 date: "2024-01-20"
 readTime: "5 min read"
 tags: ["Tag1", "Tag2"]
+category: "DevOps"
+difficulty: "Intermediate"
+image: "/og-default.jpg"
 ---
-
-# Main Heading
 
 Your content here...
 

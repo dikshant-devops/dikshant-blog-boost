@@ -1,4 +1,19 @@
-# Understanding Google Cloud Armor: A Complete Guide
+---
+title: "Understanding Google Cloud Armor: A Complete Guide"
+excerpt: "Learn how Google Cloud Armor protects internet-facing workloads with WAF rules, DDoS defense, rate limiting, logging, and adaptive protection."
+date: "2025-01-05"
+updatedDate: "2025-01-05"
+author: "Dikshant Sharma"
+category: "Cloud"
+platform: "GCP"
+series: "GCP Day by Day"
+seriesOrder: 1
+difficulty: "Intermediate"
+image: "/og-default.jpg"
+tags: ["GCP", "Cloud Armor", "Security", "Load Balancer", "Networking"]
+tools: ["Cloud Armor", "Load Balancer"]
+readTime: "3 min read"
+---
 
 Securing applications exposed to the internet has become more critical than ever. Distributed Denial-of-Service (DDoS) attacks, malicious traffic, and abuse patterns are increasing in frequency and complexity. Google Cloud offers **Cloud Armor**, a powerful security service designed to protect your workloads at scale.  
 

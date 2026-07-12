@@ -11,83 +11,10 @@ interface SEOData {
   publishedTime?: string;
   modifiedTime?: string;
   tags?: string[];
+  robots?: string;
 }
 
-export const useSEO = (data: SEOData) => {
-  // Memoize meta tags array to prevent recreation on every render
-  const metaTags = useMemo(() => [
-    { name: 'description', content: data.description },
-    { name: 'keywords', content: data.keywords || '' },
-    { name: 'author', content: data.author || 'Dikshant' },
-
-    // Open Graph
-    { property: 'og:title', content: data.title },
-    { property: 'og:description', content: data.description },
-    { property: 'og:type', content: data.type || 'article' },
-    { property: 'og:url', content: data.url || window.location.href },
-    { property: 'og:image', content: data.image || '/logo.svg' },
-    { property: 'og:site_name', content: 'Tech With Dikshant' },
-
-    // Twitter Cards
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:site', content: '@techwithdikshant' },
-    { name: 'twitter:title', content: data.title },
-    { name: 'twitter:description', content: data.description },
-    { name: 'twitter:image', content: data.image || '/logo.svg' },
-
-    // Article specific
-    ...(data.publishedTime ? [{ property: 'article:published_time', content: data.publishedTime }] : []),
-    ...(data.modifiedTime ? [{ property: 'article:modified_time', content: data.modifiedTime }] : []),
-    ...(data.tags ? data.tags.map(tag => ({ property: 'article:tag', content: tag })) : []),
-  ], [data.title, data.description, data.keywords, data.author, data.image, data.url, data.type, data.publishedTime, data.modifiedTime, data.tags]);
-
-  useEffect(() => {
-    // Update document title
-    document.title = data.title;
-
-    // Remove existing SEO meta tags
-    const existingMetas = document.querySelectorAll('meta[data-seo="true"]');
-    existingMetas.forEach(meta => meta.remove());
-
-    // Batch DOM operations using DocumentFragment - reduces reflows
-    const fragment = document.createDocumentFragment();
-
-    // Create all meta tags and add to fragment
-    metaTags.forEach(tag => {
-      if (tag.content) {
-        const meta = document.createElement('meta');
-        if ('name' in tag) {
-          meta.setAttribute('name', tag.name);
-        } else if ('property' in tag) {
-          meta.setAttribute('property', tag.property);
-        }
-        meta.setAttribute('content', tag.content);
-        meta.setAttribute('data-seo', 'true');
-        fragment.appendChild(meta);
-      }
-    });
-
-    // Single DOM insertion - much faster than multiple appendChild calls
-    document.head.appendChild(fragment);
-
-    // Add canonical URL
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
-    if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.rel = 'canonical';
-      document.head.appendChild(canonical);
-    }
-    canonical.href = data.url || window.location.href;
-
-    return () => {
-      // Cleanup on unmount
-      const metas = document.querySelectorAll('meta[data-seo="true"]');
-      metas.forEach(meta => meta.remove());
-    };
-  }, [data.title, data.url, metaTags]);
-};
-
-export const useArticleStructuredData = (data: {
+type ArticleStructuredData = {
   title: string;
   description: string;
   author: string;
@@ -96,14 +23,113 @@ export const useArticleStructuredData = (data: {
   image?: string;
   tags?: string[];
   readTime?: string;
-}) => {
+  url?: string;
+};
+
+export const useSEO = (data: SEOData | null) => {
+  const imageUrl = useMemo(() => {
+    if (!data) return '';
+    const image = data.image || '/og-default.jpg';
+    return image.startsWith('http') ? image : `${window.location.origin}${image}`;
+  }, [data]);
+
+  // Memoize meta tags array to prevent recreation on every render
+  const metaTags = useMemo(() => [
+    ...(data ? [
+    { name: 'description', content: data.description },
+    { name: 'keywords', content: data.keywords || '' },
+    { name: 'author', content: data.author || 'Dikshant Sharma' },
+    { name: 'robots', content: data.robots || 'index, follow' },
+
+    // Open Graph
+    { property: 'og:title', content: data.title },
+    { property: 'og:description', content: data.description },
+    { property: 'og:type', content: data.type || 'article' },
+    { property: 'og:url', content: data.url || window.location.href },
+    { property: 'og:image', content: imageUrl },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { property: 'og:site_name', content: 'Tech With Dikshant' },
+
+    // Twitter Cards
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:site', content: '@techwithdikshant' },
+    { name: 'twitter:title', content: data.title },
+    { name: 'twitter:description', content: data.description },
+    { name: 'twitter:image', content: imageUrl },
+
+    // Article specific
+    ...(data.publishedTime ? [{ property: 'article:published_time', content: data.publishedTime }] : []),
+    ...(data.modifiedTime ? [{ property: 'article:modified_time', content: data.modifiedTime }] : []),
+    ...(data.author ? [{ property: 'article:author', content: data.author }] : []),
+    ...(data.tags ? data.tags.map(tag => ({ property: 'article:tag', content: tag })) : []),
+    ] : []),
+  ], [data, imageUrl]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    // Update document title
+    document.title = data.title;
+
+    document.querySelectorAll('meta[property="article:tag"]').forEach(meta => meta.remove());
+
+    metaTags.forEach(tag => {
+      const attribute = 'name' in tag ? 'name' : 'property';
+      const key = 'name' in tag ? tag.name : tag.property;
+
+      if (key === 'article:tag') {
+        const meta = document.createElement('meta');
+        meta.setAttribute('property', key);
+        meta.setAttribute('content', tag.content);
+        meta.setAttribute('data-seo', 'true');
+        document.head.appendChild(meta);
+        return;
+      }
+
+      const matches = Array.from(document.querySelectorAll(`meta[${attribute}="${key}"]`));
+      const [existing, ...duplicates] = matches;
+      duplicates.forEach(meta => meta.remove());
+
+      if (!tag.content) {
+        existing?.remove();
+        return;
+      }
+
+      const meta = existing || document.createElement('meta');
+      meta.setAttribute(attribute, key);
+      meta.setAttribute('content', tag.content);
+      meta.setAttribute('data-seo', 'true');
+      if (!existing) document.head.appendChild(meta);
+    });
+
+    // Add canonical URL
+    const canonicals = Array.from(document.querySelectorAll('link[rel="canonical"]')) as HTMLLinkElement[];
+    let canonical = canonicals.shift();
+    canonicals.forEach(link => link.remove());
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = data.url || window.location.href;
+  }, [data, metaTags]);
+};
+
+export const useArticleStructuredData = (data: ArticleStructuredData | null) => {
+  const imageUrl = useMemo(() => {
+    if (!data) return '';
+    const image = data.image || '/og-default.jpg';
+    return image.startsWith('http') ? image : `${window.location.origin}${image}`;
+  }, [data]);
+
   // Memoize structured data to prevent recalculation on every render
-  const structuredData = useMemo(() => ({
+  const structuredData = useMemo(() => data ? ({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     "headline": data.title,
     "description": data.description,
-    "image": data.image || '/logo.svg',
+    "image": imageUrl,
     "author": {
       "@type": "Person",
       "name": data.author,
@@ -121,29 +147,24 @@ export const useArticleStructuredData = (data: {
     "dateModified": data.dateModified || data.datePublished,
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": window.location.href
+      "@id": data.url || window.location.href
     },
     "keywords": data.tags?.join(', ') || '',
     ...(data.readTime && {
       "timeRequired": data.readTime
     })
-  }), [data.title, data.description, data.author, data.datePublished, data.dateModified, data.image, data.tags, data.readTime]);
+  }) : null, [data, imageUrl]);
 
   useEffect(() => {
-    // Remove existing structured data
-    const existing = document.querySelector('script[data-structured-data="article"]');
-    if (existing) existing.remove();
+    if (!structuredData) return;
 
-    // Create and insert structured data script
-    const script = document.createElement('script');
+    const scripts = Array.from(document.querySelectorAll('script[data-structured-data="article"]'));
+    const [existing, ...duplicates] = scripts;
+    duplicates.forEach(script => script.remove());
+    const script = existing || document.createElement('script');
     script.type = 'application/ld+json';
     script.setAttribute('data-structured-data', 'article');
     script.textContent = JSON.stringify(structuredData);
-    document.head.appendChild(script);
-
-    return () => {
-      const script = document.querySelector('script[data-structured-data="article"]');
-      if (script) script.remove();
-    };
+    if (!existing) document.head.appendChild(script);
   }, [structuredData]);
 };

@@ -2,18 +2,126 @@ import { useState, useEffect } from 'react';
 import { BlogPost } from "@/types/blog";
 import { TAG_CONFIGS } from "@/config/tags";
 
-// Cache layer for improved performance - scales to 1000+ posts
+// Cache the compact indexes and hydrate full articles only on article routes.
 let postsCache: BlogPost[] | null = null;
 let cacheTimestamp: number = 0;
+let searchIndexCache: Record<string, string> | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Map of filename to post ID for direct loading
 const filenameToIdMap = new Map<string, string>();
+const fullPostCache = new Map<string, BlogPost>();
+const postDetailsCache = new Map<string, Pick<BlogPost, 'headings'>>();
+
+type FrontmatterValue = string | string[] | undefined;
+type FrontmatterMetadata = Record<string, FrontmatterValue>;
+
+function stripFrontmatter(content: string): string {
+  return content.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '').trim();
+}
+
+function normalizeIndexedPost(post: Partial<BlogPost> & { slug?: string; fileName?: string }): BlogPost {
+  const id = post.id || post.slug || '';
+  return {
+    id,
+    slug: post.slug || id,
+    fileName: post.fileName,
+    title: post.title || 'Untitled',
+    excerpt: post.excerpt || 'No description available',
+    date: post.date || new Date().toISOString().split('T')[0],
+    updatedDate: post.updatedDate,
+    readTime: post.readTime || '1 min read',
+    wordCount: post.wordCount,
+    author: post.author || 'Dikshant Sharma',
+    tags: Array.isArray(post.tags) ? post.tags : ['DevOps'],
+    category: post.category || 'DevOps',
+    platform: post.platform || '',
+    tools: Array.isArray(post.tools) ? post.tools : [],
+    series: post.series || '',
+    seriesSlug: post.seriesSlug || '',
+    seriesOrder: post.seriesOrder,
+    difficulty: post.difficulty || 'Beginner',
+    featured: Boolean(post.featured),
+    image: post.image || '/og-default.jpg',
+    canonicalUrl: post.canonicalUrl,
+    searchText: post.searchText || `${post.title || ''} ${post.excerpt || ''}`,
+    headings: Array.isArray(post.headings) ? post.headings : [],
+    content: post.content || ''
+  };
+}
+
+async function loadIndexedPosts(): Promise<BlogPost[]> {
+  const response = await fetch('/blog-posts-index.json');
+  if (!response.ok) {
+    throw new Error('Blog index not found');
+  }
+
+  const index = await response.json() as Array<Partial<BlogPost> & { slug?: string; fileName?: string }>;
+  return index.map(normalizeIndexedPost);
+}
+
+export async function loadBlogSearchIndex(): Promise<Record<string, string>> {
+  if (searchIndexCache) return searchIndexCache;
+
+  const response = await fetch('/blog-search-index.json');
+  if (!response.ok) throw new Error('Blog search index not found');
+
+  const entries = await response.json() as Array<{ id: string; searchText: string }>;
+  searchIndexCache = Object.fromEntries(entries.map(entry => [entry.id, entry.searchText]));
+  return searchIndexCache;
+}
+
+async function loadBlogPostDetails(id: string): Promise<Pick<BlogPost, 'headings'>> {
+  const cached = postDetailsCache.get(id);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`/blog-post-details/${encodeURIComponent(id)}.json`);
+    if (!response.ok) return { headings: [] };
+    const details = await response.json() as Pick<BlogPost, 'headings'>;
+    const normalized = { headings: Array.isArray(details.headings) ? details.headings : [] };
+    postDetailsCache.set(id, normalized);
+    return normalized;
+  } catch {
+    return { headings: [] };
+  }
+}
+
+async function hydrateIndexedPost(post: BlogPost): Promise<BlogPost | null> {
+  if (post.content) return post;
+  if (!post.fileName) return null;
+
+  const [response, details] = await Promise.all([
+    fetch(`/blog-posts/${encodeURIComponent(post.fileName)}`),
+    loadBlogPostDetails(post.id)
+  ]);
+  if (!response.ok) return null;
+
+  const markdown = await response.text();
+  const fullPost = { ...post, ...details, content: stripFrontmatter(markdown) };
+  fullPostCache.set(post.id, fullPost);
+  return fullPost;
+}
 
 export async function loadMarkdownPosts(forceRefresh = false): Promise<BlogPost[]> {
   // Return cached posts if available and not expired
   if (!forceRefresh && postsCache && Date.now() - cacheTimestamp < CACHE_DURATION) {
     return postsCache;
+  }
+
+  try {
+    const indexedPosts = await loadIndexedPosts();
+    indexedPosts.forEach(post => {
+      if (post.fileName) {
+        filenameToIdMap.set(post.fileName, post.id);
+      }
+    });
+
+    postsCache = indexedPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    cacheTimestamp = Date.now();
+    return postsCache;
+  } catch (indexError) {
+    console.warn('[markdownLoader] Could not load generated blog index, falling back to markdown manifest:', indexError);
   }
 
   const posts: BlogPost[] = [];
@@ -29,7 +137,6 @@ export async function loadMarkdownPosts(forceRefresh = false): Promise<BlogPost[
       const manifestResponse = await fetch('/blog-posts-manifest.json');
       if (manifestResponse.ok) {
         markdownFiles = await manifestResponse.json();
-        console.log('[markdownLoader] Loaded manifest with files:', markdownFiles);
       } else {
         throw new Error('Manifest not found');
       }
@@ -48,7 +155,7 @@ export async function loadMarkdownPosts(forceRefresh = false): Promise<BlogPost[
 
     const loadPromises = markdownFiles.map(async (filename) => {
       try {
-        const response = await fetch(`/blog-posts/${filename}`);
+        const response = await fetch(`/blog-posts/${encodeURIComponent(filename)}`);
         if (response.ok) {
           const content = await response.text();
           const post = parseMarkdownFile(content, filename);
@@ -83,7 +190,7 @@ export async function loadMarkdownPosts(forceRefresh = false): Promise<BlogPost[
   return sortedPosts;
 }
 
-// Parse markdown file with or without frontmatter
+// Fallback parser for local dev/test if the generated index is unavailable.
 function parseMarkdownFile(content: string, filename: string): BlogPost | null {
   try {
     let title = '';
@@ -102,7 +209,7 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
       const frontmatter = frontmatterMatch[1];
       markdownContent = frontmatterMatch[2];
       
-      const metadata: any = {};
+      const metadata: FrontmatterMetadata = {};
       const lines = frontmatter.split('\n');
       
       for (const line of lines) {
@@ -129,10 +236,10 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
         }
       }
       
-      title = metadata.title || '';
-      excerpt = metadata.excerpt || '';
-      date = metadata.date || '';
-      readTime = metadata.readTime || '';
+      title = String(metadata.title || '');
+      excerpt = String(metadata.excerpt || '');
+      date = String(metadata.date || '');
+      readTime = String(metadata.readTime || '');
       tags = Array.isArray(metadata.tags) ? metadata.tags : [];
     }
 
@@ -165,7 +272,7 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
 
     if (tags.length === 0) {
       // Auto-detect tags from filename and content if not specified in frontmatter
-      const autoTags = [];
+      const autoTags: string[] = [];
       const fileName = filename.toLowerCase();
       const contentLower = markdownContent.toLowerCase();
       
@@ -197,11 +304,22 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
 
     return {
       id,
+      slug: id,
+      fileName: filename,
       title: title.trim(),
       excerpt: excerpt.trim(),
       date,
       readTime,
       tags,
+      category: tags.includes('CI/CD') ? 'CI/CD' : tags.includes('Docker') || tags.includes('Kubernetes') ? 'Containers' : tags.includes('GCP') || tags.includes('AWS') || tags.includes('Azure') ? 'Cloud' : 'DevOps',
+      platform: tags.find(tag => ['GCP', 'AWS', 'Azure', 'Kubernetes', 'Docker'].includes(tag)) || '',
+      tools: tags.filter(tag => ['GitHub Actions', 'Jenkins', 'Docker', 'Kubernetes', 'Git', 'Cloud Armor', 'Load Balancer'].includes(tag)),
+      series: '',
+      difficulty: 'Beginner',
+      author: 'Dikshant Sharma',
+      image: '/og-default.jpg',
+      searchText: `${title} ${excerpt} ${markdownContent}`,
+      headings: [],
       content: markdownContent.trim()
     };
   } catch (error) {
@@ -213,12 +331,24 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
 // Function to load a single markdown post by ID - OPTIMIZED for direct loading
 export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
   try {
+    if (fullPostCache.has(id)) {
+      return fullPostCache.get(id) || null;
+    }
+
     // Check cache first - if all posts are cached, find from cache
     if (postsCache && postsCache.length > 0) {
       const cachedPost = postsCache.find(p => p.id === id);
       if (cachedPost) {
-        return cachedPost;
+        const fullPost = await hydrateIndexedPost(cachedPost);
+        if (fullPost) return fullPost;
       }
+    }
+
+    const indexedPosts = await loadMarkdownPosts();
+    const indexedPost = indexedPosts.find(p => p.id === id);
+    if (indexedPost) {
+      const fullPost = await hydrateIndexedPost(indexedPost);
+      if (fullPost) return fullPost;
     }
 
     // If not in cache, try direct file loading using possible filename variations
@@ -233,11 +363,12 @@ export async function loadMarkdownPost(id: string): Promise<BlogPost | null> {
     // Try to load directly from each possible filename
     for (const filename of possibleFilenames) {
       try {
-        const response = await fetch(`/blog-posts/${filename}`);
+        const response = await fetch(`/blog-posts/${encodeURIComponent(filename)}`);
         if (response.ok) {
           const content = await response.text();
           const post = parseMarkdownFile(content, filename);
           if (post && post.id === id) {
+            fullPostCache.set(id, post);
             return post;
           }
         }
@@ -262,6 +393,9 @@ export function clearPostsCache(): void {
   postsCache = null;
   cacheTimestamp = 0;
   filenameToIdMap.clear();
+  fullPostCache.clear();
+  postDetailsCache.clear();
+  searchIndexCache = null;
 }
 
 // Hook to use markdown posts with React

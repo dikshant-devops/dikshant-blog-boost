@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadMarkdownPosts, loadMarkdownPost, clearPostsCache } from './markdownLoader';
+import { loadBlogSearchIndex, loadMarkdownPosts, loadMarkdownPost, clearPostsCache } from './markdownLoader';
 
 // Mock import.meta.glob
 vi.mock('/public/blog-posts/*.md', () => ({}));
@@ -28,6 +28,12 @@ describe('markdownLoader', () => {
 
     // Mock fetch to return content for known files, 404 for unknown
     (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('blog-search-index')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([{ id: 'test-blog-post', searchText: 'full article body' }]),
+        });
+      }
       // Manifest request
       if (url.includes('manifest')) {
         return Promise.resolve({
@@ -144,6 +150,17 @@ describe('markdownLoader', () => {
 
       // Should not be the same instance after clearing cache
       expect(posts1).not.toBe(posts2);
+    });
+  });
+
+  describe('loadBlogSearchIndex', () => {
+    it('loads and caches the separate full-text index', async () => {
+      const first = await loadBlogSearchIndex();
+      const second = await loadBlogSearchIndex();
+
+      expect(first).toEqual({ 'test-blog-post': 'full article body' });
+      expect(second).toBe(first);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
     });
   });
 

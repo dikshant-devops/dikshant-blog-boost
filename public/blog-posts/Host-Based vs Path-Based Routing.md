@@ -1,4 +1,19 @@
-# Host-Based vs Path-Based Routing in Load Balancers  
+---
+title: "Host-Based vs Path-Based Routing in Load Balancers"
+excerpt: "Compare host-based and path-based routing patterns for modern load balancers, including use cases, diagrams, and AWS ALB examples."
+date: "2025-01-06"
+updatedDate: "2025-01-06"
+author: "Dikshant Sharma"
+category: "Networking"
+platform: "AWS"
+series: "AWS Day by Day"
+seriesOrder: 1
+difficulty: "Beginner"
+image: "/og-default.jpg"
+tags: ["AWS", "Load Balancer", "Networking", "DevOps"]
+tools: ["Load Balancer"]
+readTime: "3 min read"
+---
 
 When designing scalable applications, routing strategies play a crucial role in ensuring traffic is directed to the right service. Modern load balancers provide advanced routing mechanisms such as **host-based routing** and **path-based routing**, enabling more flexibility and control.  
 

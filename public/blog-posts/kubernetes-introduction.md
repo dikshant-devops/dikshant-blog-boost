@@ -2,11 +2,18 @@
 title: "Introduction to Kubernetes: Container Orchestration Made Simple"
 excerpt: "Discover how Kubernetes can help you manage and scale containerized applications in production environments."
 date: "2024-12-18"
+updatedDate: "2024-12-18"
+author: "Dikshant Sharma"
+category: "Containers"
+platform: "Kubernetes"
+series: "Container Fundamentals"
+seriesOrder: 2
+difficulty: "Beginner"
+image: "/og-default.jpg"
 readTime: "10 min read"
 tags: ["Kubernetes", "DevOps", "Containers", "Orchestration"]
+tools: ["Kubernetes", "Docker"]
 ---
-
-# Introduction to Kubernetes: Container Orchestration Made Simple
 
 As applications grow and containerization becomes standard, managing hundreds or thousands of containers manually becomes impossible. This is where Kubernetes (K8s) comes in - the de facto standard for container orchestration.
 

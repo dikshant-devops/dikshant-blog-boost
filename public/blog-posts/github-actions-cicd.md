@@ -2,11 +2,18 @@
 title: "CI/CD with GitHub Actions: Automate Your Development Workflow"
 excerpt: "Learn how to set up continuous integration and deployment pipelines using GitHub Actions for faster, more reliable software delivery."
 date: "2024-12-20"
+updatedDate: "2024-12-20"
+author: "Dikshant Sharma"
+category: "CI/CD"
+platform: ""
+series: "CI/CD Tooling"
+seriesOrder: 1
+difficulty: "Intermediate"
+image: "/og-default.jpg"
 readTime: "12 min read"
 tags: ["GitHub Actions", "CI/CD", "DevOps", "Automation"]
+tools: ["GitHub Actions", "Docker"]
 ---
-
-# CI/CD with GitHub Actions: Automate Your Development Workflow
 
 GitHub Actions has revolutionized how developers approach CI/CD by bringing automation directly into the GitHub ecosystem. In this comprehensive guide, we'll explore how to build robust CI/CD pipelines that automate testing, building, and deployment.
 

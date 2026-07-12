@@ -7,7 +7,7 @@ A modern, high-performance blog platform focused on DevOps tutorials and best pr
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ and npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js 22.12+ and npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
 ### Local Development
 
@@ -31,24 +31,30 @@ See [HOW_TO_ADD_BLOG_POSTS.md](./HOW_TO_ADD_BLOG_POSTS.md) for detailed instruct
 
 **Quick steps:**
 1. Create a `.md` file in `/public/blog-posts/`
-2. Add frontmatter (optional - auto-generated if missing)
+2. Add structured frontmatter for category, platform, series, tools, and tags
 3. Write your content in Markdown
-4. Save - it appears automatically!
+4. Run `npm run content:index` for local preview, or let `npm run build` regenerate content artifacts automatically
 
 **Example**:
 ```markdown
 ---
-title: "My DevOps Tutorial"
-excerpt: "Learn Docker and Kubernetes"
+title: "Production Docker Deployment with Kubernetes"
+excerpt: "A tested Docker and Kubernetes deployment walkthrough with verification commands, observed output, and rollback guidance."
 date: "2024-01-20"
 readTime: "5 min read"
 tags: ["Docker", "Kubernetes"]
+category: "Containers"
+platform: "Kubernetes"
+tools: ["Docker", "Kubernetes"]
+image: "/og-default.jpg"
 ---
 
-# My Tutorial Content
+Start the article introduction here. The frontmatter title is rendered as the page H1.
 
-Your blog post content here...
+## First Tested Step
 ```
+
+Tags drive the public navigation on the blog page. For example, `tags: ["GCP", "Security"]` makes the post appear in the `/blog?tag=GCP` view. Posts with `series` are grouped there like a playlist; posts without `series` stay as regular article cards. The blog renders tags in a fixed taxonomy order: core topics, cloud platforms, containers, delivery, operations, then developer tools.
 
 ## 🛠️ Development Commands
 
@@ -56,8 +62,14 @@ Your blog post content here...
 # Start development server
 npm run dev
 
+# Regenerate blog index, sitemap, RSS feed, and robots metadata
+npm run content:index
+
 # Build for production
 npm run build
+
+# Re-run release artifact checks without rebuilding
+npm run verify:build
 
 # Preview production build
 npm run preview
@@ -65,6 +77,8 @@ npm run preview
 # Run linter
 npm run lint
 ```
+
+The Markdown authoring tool is intentionally available only on the loopback-bound local development server at `/admin`. It is excluded from the production JavaScript bundle, and Cloudflare Pages returns `404` for the production `/admin` path.
 
 ## 🧪 Testing
 
@@ -84,8 +98,6 @@ npm run test:ui
 npm run test:coverage
 ```
 
-**Current Test Coverage**: 10/10 component tests passing
-
 ## 🛠️ Tech Stack
 
 ### Core
@@ -102,9 +114,10 @@ npm run test:coverage
 
 ### Features
 - **Markdown Support** - Full GitHub Flavored Markdown
-- **SEO Optimized** - Meta tags, Open Graph, structured data
+- **Tag Collections** - Public tag views with playlist-style series grouping
+- **SEO Optimized** - Sitemap, RSS, canonical URLs, Open Graph, and per-post structured data shells
 - **Dark/Light Mode** - Theme switching with persistence
-- **Performance** - Intelligent caching, code-splitting, memoization
+- **Performance** - Build-time content index, cache-first loading, code-splitting, memoization
 - **Responsive** - Mobile-first design
 
 ### Testing
@@ -116,7 +129,12 @@ npm run test:coverage
 
 ```
 ├── public/
-│   └── blog-posts/          # Markdown blog posts
+│   ├── blog-posts/          # Markdown blog posts
+│   ├── blog-posts-index.json # Generated lightweight listing index
+│   ├── blog-search-index.json # Generated lazy full-text search index
+│   ├── blog-post-details/    # Generated per-route heading metadata
+│   ├── sitemap.xml          # Generated SEO sitemap
+│   └── rss.xml              # Generated RSS feed
 ├── src/
 │   ├── components/          # Reusable components
 │   │   ├── ui/             # shadcn/ui components
@@ -142,13 +160,12 @@ npm run test:coverage
 
 This blog is optimized for scale:
 
-- **Smart Caching**: 5-minute cache reduces redundant loads
+- **Small Initial Index**: Cards load from a compact metadata file; body search and headings load on demand
+- **Smart Caching**: 5-minute in-memory and edge revalidation windows reduce redundant loads
 - **Code Splitting**: Markdown library loads only when needed
-- **Memoization**: Prevents unnecessary re-renders
 - **Lazy Loading**: Routes load on-demand
-- **Optimized SEO**: Batched DOM operations
-
-**Scalability**: Handles 1000+ blog posts efficiently with cache-first architecture.
+- **Static SEO Output**: Every known route has crawlable HTML, canonical metadata, and validated schema
+- **Release Budgets**: Production builds fail on missing routes, duplicate metadata, oversized chunks, or payload regressions
 
 ## 🎨 Adding Custom Tags
 
@@ -167,20 +184,13 @@ Available tags: Docker, Kubernetes, CI/CD, DevOps, AWS, Azure, GCP, Terraform, A
 
 ## 🌐 Deployment
 
-This project is configured for multiple deployment platforms:
+Production runs on **Cloudflare Pages**. Use `npm run build` as the build command and `dist` as the output directory. Pages Functions in `functions/` provide newsletter, contact, and the production `/admin` denial route.
 
-- **Netlify** (Primary) - See `netlify.toml`
-- **GitHub Pages** - See `.github/workflows/deploy.yml`
-- **Cloudflare Pages** - See `wrangler.toml`
+Required production secrets are configured in Cloudflare, never committed: `BEEHIIV_API_KEY`, `BEEHIIV_PUBLICATION_ID`, `SHEETDB_API_URL`, and `TURNSTILE_SECRET_KEY`. The public `VITE_TURNSTILE_SITE_KEY` is supplied at build time.
 
-### Deploy to Netlify
-```sh
-npm run build
-# Deploy the dist/ folder
-```
+The generated clean-URL HTML files cover every application route, so there is intentionally no catch-all 200 rewrite. Unknown URLs must remain real 404 responses.
 
-### Deploy to GitHub Pages
-Push to main branch - automated via GitHub Actions
+`public/_routes.json` limits Function invocation to the newsletter, contact, and blocked admin routes. Static articles bypass Functions and remain cacheable static requests.
 
 ## 📚 Documentation
 

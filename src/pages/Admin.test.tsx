@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import matter from 'gray-matter';
 import Admin from './Admin';
+import { validateBlogDraft } from '@/lib/blogDraftValidation';
 
 // Mock useToast
 const mockToast = vi.fn();
@@ -15,6 +17,30 @@ function getTagAddButton() {
   const flexParent = tagInput.parentElement!;
   const button = flexParent.querySelector('button');
   return button!;
+}
+
+function getToolAddButton() {
+  return screen.getByPlaceholderText('Add a tool').parentElement!.querySelector('button')!;
+}
+
+function readBlobAsText(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
+const validBody = `## Tested Implementation\n\n${Array.from({ length: 310 }, () => 'evidence').join(' ')}`;
+const validExcerpt = 'A tested production implementation with exact commands, observed results, validation checks, operational context, and rollback guidance.';
+
+function fillValidDraft(title: string) {
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: title } });
+  fireEvent.change(screen.getByLabelText('Excerpt'), { target: { value: validExcerpt } });
+  fireEvent.change(screen.getByLabelText('Content (Markdown)'), { target: { value: validBody } });
+  fireEvent.change(screen.getByPlaceholderText('Add a tag'), { target: { value: 'DevOps' } });
+  fireEvent.click(getTagAddButton());
 }
 
 describe('Admin Page', () => {
@@ -70,7 +96,7 @@ describe('Admin Page', () => {
       fireEvent.change(screen.getByPlaceholderText('Add a tag'), { target: { value: 'Docker' } });
       fireEvent.click(getTagAddButton());
 
-      expect(screen.getByText('Docker')).toBeInTheDocument();
+      expect(within(screen.getByTestId('tag-badges')).getByText('Docker')).toBeInTheDocument();
     });
 
     it('clears tag input after adding', () => {
@@ -91,7 +117,7 @@ describe('Admin Page', () => {
       fireEvent.change(tagInput, { target: { value: 'Docker' } });
       fireEvent.click(getTagAddButton());
 
-      const dockerBadges = screen.getAllByText('Docker');
+      const dockerBadges = within(screen.getByTestId('tag-badges')).getAllByText('Docker');
       expect(dockerBadges.length).toBe(1);
     });
 
@@ -101,8 +127,7 @@ describe('Admin Page', () => {
       fireEvent.click(getTagAddButton());
 
       // No tag badges should appear (only the "Add a tag" input exists)
-      const badges = document.querySelectorAll('.flex.flex-wrap.gap-2.mt-2');
-      expect(badges.length).toBe(0);
+      expect(screen.queryByTestId('tag-badges')).not.toBeInTheDocument();
     });
 
     it('removes a tag when X button is clicked', () => {
@@ -110,14 +135,14 @@ describe('Admin Page', () => {
       fireEvent.change(screen.getByPlaceholderText('Add a tag'), { target: { value: 'Docker' } });
       fireEvent.click(getTagAddButton());
 
-      expect(screen.getByText('Docker')).toBeInTheDocument();
+      expect(within(screen.getByTestId('tag-badges')).getByText('Docker')).toBeInTheDocument();
 
       // The X button is inside the badge, next to the text
-      const dockerText = screen.getByText('Docker');
+      const dockerText = within(screen.getByTestId('tag-badges')).getByText('Docker');
       const removeBtn = dockerText.parentElement!.querySelector('button')!;
       fireEvent.click(removeBtn);
 
-      expect(screen.queryByText('Docker')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('tag-badges')).not.toBeInTheDocument();
     });
   });
 
@@ -162,11 +187,10 @@ describe('Admin Page', () => {
       vi.stubGlobal('URL', { createObjectURL: mockCreateObjectURL, revokeObjectURL: mockRevokeObjectURL });
 
       render(<Admin />);
-      fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Getting Started with Docker!' } });
-      fireEvent.change(screen.getByLabelText('Content (Markdown)'), { target: { value: '# Docker Guide' } });
+      fillValidDraft('Getting Started with Docker in Production');
       fireEvent.click(screen.getByText('Generate Blog Post'));
 
-      expect(downloadFilename).toBe('getting-started-with-docker.md');
+      expect(downloadFilename).toBe('getting-started-with-docker-in-production.md');
       expect(mockClick).toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
         title: expect.stringContaining('generated'),
@@ -174,6 +198,96 @@ describe('Admin Page', () => {
 
       vi.restoreAllMocks();
     });
+
+    it('omits series metadata when the post is not part of a playlist', async () => {
+      const mockClick = vi.fn();
+      const origCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: any) => {
+        const el = origCreateElement(tag, options);
+        if (tag === 'a') {
+          Object.defineProperty(el, 'click', { value: mockClick, writable: true });
+        }
+        return el;
+      });
+
+      const mockCreateObjectURL = vi.fn().mockReturnValue('blob:test');
+      const mockRevokeObjectURL = vi.fn();
+      vi.stubGlobal('URL', { createObjectURL: mockCreateObjectURL, revokeObjectURL: mockRevokeObjectURL });
+
+      render(<Admin />);
+      fillValidDraft('Standalone Google Cloud IAM Implementation');
+      fireEvent.click(screen.getByText('Generate Blog Post'));
+
+      const generatedBlob = mockCreateObjectURL.mock.calls[0][0] as Blob;
+      const generatedMarkdown = await readBlobAsText(generatedBlob);
+
+      expect(generatedMarkdown).not.toContain('series:');
+      expect(generatedMarkdown).not.toContain('seriesOrder:');
+      expect(mockClick).toHaveBeenCalled();
+
+      vi.restoreAllMocks();
+    });
+
+    it('generates valid YAML when free-text metadata contains quotes', async () => {
+      const mockClick = vi.fn();
+      const origCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: any) => {
+        const el = origCreateElement(tag, options);
+        if (tag === 'a') {
+          Object.defineProperty(el, 'click', { value: mockClick, writable: true });
+        }
+        return el;
+      });
+
+      const mockCreateObjectURL = vi.fn().mockReturnValue('blob:test');
+      vi.stubGlobal('URL', { createObjectURL: mockCreateObjectURL, revokeObjectURL: vi.fn() });
+
+      render(<Admin />);
+      fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Production "Quoted" Infrastructure Guide' } });
+      fireEvent.change(screen.getByLabelText('Excerpt'), { target: { value: `${validExcerpt}\nLine "two"` } });
+      fireEvent.change(screen.getByLabelText('Hero / Social Image'), { target: { value: '/images/"quoted".png' } });
+      fireEvent.change(screen.getByPlaceholderText('Add a tag'), { target: { value: 'Security "Advanced"' } });
+      fireEvent.click(getTagAddButton());
+      fireEvent.change(screen.getByPlaceholderText('Add a tool'), { target: { value: 'Terraform "Cloud"' } });
+      fireEvent.click(getToolAddButton());
+      fireEvent.change(screen.getByLabelText('Content (Markdown)'), { target: { value: validBody } });
+      fireEvent.click(screen.getByText('Generate Blog Post'));
+
+      const generatedMarkdown = await readBlobAsText(mockCreateObjectURL.mock.calls[0][0] as Blob);
+      const parsed = matter(generatedMarkdown).data;
+
+      expect(parsed.title).toBe('Production "Quoted" Infrastructure Guide');
+      expect(parsed.excerpt).toBe(`${validExcerpt}\nLine "two"`);
+      expect(parsed.image).toBe('/images/"quoted".png');
+      expect(parsed.tags).toEqual(['Security "Advanced"']);
+      expect(parsed.tools).toEqual(['Terraform "Cloud"']);
+
+      vi.restoreAllMocks();
+    });
+  });
+
+  it('rejects drafts that would fail the production content build', () => {
+    const errors = validateBlogDraft({
+      title: 'Short title',
+      excerpt: 'Short excerpt',
+      content: '# Duplicate title\n\nThin body',
+      author: '',
+      image: '/logo.svg',
+      tags: [],
+      series: 'GCP Day by Day',
+      seriesOrder: '0'
+    });
+
+    expect(errors).toEqual(expect.arrayContaining([
+      expect.stringContaining('30-65'),
+      expect.stringContaining('90-180'),
+      expect.stringContaining('Author'),
+      expect.stringContaining('1 and 8'),
+      expect.stringContaining('JPEG'),
+      expect.stringContaining('H1'),
+      expect.stringContaining('300'),
+      expect.stringContaining('positive integer')
+    ]));
   });
 
   it('renders instructions section', () => {

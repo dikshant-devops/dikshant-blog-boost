@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // Mock next-themes
@@ -75,7 +75,7 @@ vi.mock('@/components/NewsletterSignup', () => ({
   NewsletterSignup: () => <div data-testid="newsletter-signup" />,
 }));
 
-import BlogPost from './BlogPost';
+import BlogPost, { CodeBlock } from './BlogPost';
 import { loadMarkdownPost, loadMarkdownPosts } from '@/utils/markdownLoader';
 
 function renderBlogPost(postId = 'test-post') {
@@ -171,5 +171,19 @@ describe('BlogPost', () => {
     // Since we mock react-markdown, we can't test the actual img rendering.
     // But we verify the component renders without error.
     expect(screen.getByTestId('markdown-content')).toBeInTheDocument();
+  });
+
+  it('copies a code block and shows feedback', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText }
+    });
+
+    render(<CodeBlock>kubectl get pods</CodeBlock>);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument());
+    expect(writeText).toHaveBeenCalledWith('kubectl get pods');
   });
 });

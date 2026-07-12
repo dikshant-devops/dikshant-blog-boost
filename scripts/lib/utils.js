@@ -1,17 +1,11 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { slugify } from './content.js';
 
 /**
  * Build canonical URL from blog post filename
  */
 export function buildCanonicalUrl(filename, siteUrl) {
-  const slug = path.basename(filename, '.md')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
+  const slug = slugify(path.basename(filename, '.md'));
 
   return `${siteUrl}/blog/${slug}`;
 }

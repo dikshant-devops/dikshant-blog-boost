@@ -7,6 +7,7 @@ afterEach(() => {
   document.querySelectorAll('meta[data-seo="true"]').forEach(el => el.remove());
   document.querySelectorAll('script[data-structured-data="article"]').forEach(el => el.remove());
   document.querySelectorAll('link[rel="canonical"]').forEach(el => el.remove());
+  document.querySelectorAll('meta[data-test-static="true"]').forEach(el => el.remove());
 });
 
 describe('useSEO', () => {
@@ -51,14 +52,45 @@ describe('useSEO', () => {
     expect(seoMetas.length).toBeGreaterThan(0);
   });
 
-  it('cleans up meta tags on unmount', () => {
+  it('retains authoritative meta tags on unmount', () => {
     const { unmount } = renderHook(() => useSEO({ title: 'Cleanup', description: 'cleanup' }));
 
     expect(document.querySelectorAll('meta[data-seo="true"]').length).toBeGreaterThan(0);
 
     unmount();
 
-    expect(document.querySelectorAll('meta[data-seo="true"]').length).toBe(0);
+    expect(document.querySelectorAll('meta[data-seo="true"]').length).toBeGreaterThan(0);
+  });
+
+  it('updates static metadata in place and removes duplicates', () => {
+    const first = document.createElement('meta');
+    first.name = 'description';
+    first.content = 'server description';
+    first.setAttribute('data-test-static', 'true');
+    document.head.appendChild(first);
+
+    const duplicate = first.cloneNode(true) as HTMLMetaElement;
+    document.head.appendChild(duplicate);
+
+    renderHook(() => useSEO({ title: 'Hydrated', description: 'client description' }));
+
+    const descriptions = document.querySelectorAll('meta[name="description"]');
+    expect(descriptions).toHaveLength(1);
+    expect(descriptions[0].getAttribute('content')).toBe('client description');
+    expect(descriptions[0]).toBe(first);
+  });
+
+  it('leaves server metadata untouched while route data is unavailable', () => {
+    const description = document.createElement('meta');
+    description.name = 'description';
+    description.content = 'server description';
+    description.setAttribute('data-test-static', 'true');
+    document.head.appendChild(description);
+
+    renderHook(() => useSEO(null));
+
+    expect(document.querySelectorAll('meta[name="description"]')).toHaveLength(1);
+    expect(description.content).toBe('server description');
   });
 
   it('includes article:published_time when publishedTime is provided', () => {
@@ -82,18 +114,18 @@ describe('useSEO', () => {
     expect(contents).toContain('K8s');
   });
 
-  it('uses default author "Dikshant" when not provided', () => {
+  it('uses the full default author name when not provided', () => {
     renderHook(() => useSEO({ title: 'Default', description: 'desc' }));
 
     const author = document.querySelector('meta[name="author"]');
-    expect(author?.getAttribute('content')).toBe('Dikshant');
+    expect(author?.getAttribute('content')).toBe('Dikshant Sharma');
   });
 
-  it('uses default image /logo.svg when not provided', () => {
+  it('uses absolute default image when not provided', () => {
     renderHook(() => useSEO({ title: 'Default', description: 'desc' }));
 
     const ogImage = document.querySelector('meta[property="og:image"]');
-    expect(ogImage?.getAttribute('content')).toBe('/logo.svg');
+    expect(ogImage?.getAttribute('content')).toBe(`${window.location.origin}/og-default.jpg`);
   });
 
   it('skips meta tags with empty content', () => {
@@ -152,13 +184,36 @@ describe('useArticleStructuredData', () => {
     expect(data.dateModified).toBe('2024-01-01');
   });
 
-  it('cleans up script on unmount', () => {
+  it('retains structured data on unmount', () => {
     const { unmount } = renderHook(() => useArticleStructuredData({
       title: 'T', description: 'D', author: 'A', datePublished: '2024-01-01',
     }));
 
     expect(document.querySelector('script[data-structured-data="article"]')).toBeTruthy();
     unmount();
-    expect(document.querySelector('script[data-structured-data="article"]')).toBeNull();
+    expect(document.querySelector('script[data-structured-data="article"]')).toBeTruthy();
+  });
+
+  it('updates server-rendered structured data without creating duplicates', () => {
+    const first = document.createElement('script');
+    first.type = 'application/ld+json';
+    first.setAttribute('data-structured-data', 'article');
+    first.textContent = '{}';
+    document.head.appendChild(first);
+    document.head.appendChild(first.cloneNode(true));
+
+    renderHook(() => useArticleStructuredData({
+      title: 'Hydrated article',
+      description: 'Description',
+      author: 'Dikshant Sharma',
+      datePublished: '2024-01-01',
+      url: 'https://example.com/blog/hydrated',
+    }));
+
+    const scripts = document.querySelectorAll('script[data-structured-data="article"]');
+    expect(scripts).toHaveLength(1);
+    expect(scripts[0]).toBe(first);
+    expect(JSON.parse(scripts[0].textContent || '{}').mainEntityOfPage['@id'])
+      .toBe('https://example.com/blog/hydrated');
   });
 });

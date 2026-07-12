@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TAG_CONFIGS, getAllTags, getTagConfig } from './tags';
+import { TAG_CONFIGS, getAllTags, getOrderedTagGroups, getTagConfig, sortTagsByTaxonomy } from './tags';
 
 describe('TAG_CONFIGS', () => {
   it('contains expected core tags', () => {
@@ -50,5 +50,25 @@ describe('getTagConfig', () => {
   it('is case-sensitive', () => {
     expect(getTagConfig('docker')).toBeUndefined();
     expect(getTagConfig('Docker')).toBeDefined();
+  });
+});
+
+describe('tag ordering', () => {
+  it('sorts tags by the public taxonomy instead of alphabetically', () => {
+    expect(sortTagsByTaxonomy(['Docker', 'GCP', 'DevOps', 'GitHub Actions'])).toEqual([
+      'DevOps',
+      'GCP',
+      'Docker',
+      'GitHub Actions',
+    ]);
+  });
+
+  it('groups visible tags by reader-facing sections', () => {
+    expect(getOrderedTagGroups(['Docker', 'GCP', 'DevOps', 'GitHub Actions'])).toEqual([
+      { title: 'Core Topics', tags: ['DevOps'] },
+      { title: 'Cloud Platforms', tags: ['GCP'] },
+      { title: 'Containers', tags: ['Docker'] },
+      { title: 'Delivery', tags: ['GitHub Actions'] },
+    ]);
   });
 });

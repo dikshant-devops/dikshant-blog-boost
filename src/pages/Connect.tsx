@@ -6,19 +6,33 @@ import { Label } from "@/components/ui/label";
 import { Linkedin, Twitter, Github, Mail, MessageCircle, Calendar, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 // Extend window interface for Turnstile
 declare global {
   interface Window {
     turnstile?: {
-      reset: () => void;
-      render: (element: string | HTMLElement, options: any) => void;
+      reset: (widgetId?: string) => void;
+      render: (element: string | HTMLElement, options: {
+        sitekey: string;
+        callback: (token: string) => void;
+        "error-callback"?: () => void;
+        theme?: "auto" | "light" | "dark";
+      }) => string;
     };
     onTurnstileSuccess?: (token: string) => void;
   }
 }
 
 export default function Connect() {
+  useSEO({
+    title: "Contact Dikshant Sharma | Tech With Dikshant",
+    description: "Contact Dikshant Sharma about DevOps, cloud engineering, technical collaboration, or questions about published tutorials.",
+    keywords: "contact Dikshant Sharma, DevOps collaboration, cloud engineering",
+    type: "website",
+    url: `${window.location.origin}/connect`
+  });
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -35,10 +49,12 @@ export default function Connect() {
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
     if (!siteKey) return;
+    let active = true;
 
     const renderWidget = () => {
+      if (!active) return;
       const container = document.getElementById('turnstile-widget');
-      if (!container || !window.turnstile) return;
+      if (!container || !window.turnstile || container.childElementCount > 0) return;
 
       try {
         const id = window.turnstile.render('#turnstile-widget', {
@@ -57,23 +73,26 @@ export default function Connect() {
 
     if (window.turnstile) {
       renderWidget();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(checkInterval);
-          renderWidget();
-        }
-      }, 100);
-
-      const timeout = setTimeout(() => {
-        clearInterval(checkInterval);
-      }, 10000);
-
       return () => {
-        clearInterval(checkInterval);
-        clearTimeout(timeout);
+        active = false;
       };
     }
+
+    let script = document.querySelector<HTMLScriptElement>('script[data-turnstile-script="true"]');
+    if (!script) {
+      script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.setAttribute('data-turnstile-script', 'true');
+      document.head.appendChild(script);
+    }
+    script.addEventListener('load', renderWidget);
+
+    return () => {
+      active = false;
+      script?.removeEventListener('load', renderWidget);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -281,7 +300,7 @@ export default function Connect() {
                   </div>
 
                   {/* Debug: Show if environment variable is loaded */}
-                  {!import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                  {import.meta.env.DEV && !import.meta.env.VITE_TURNSTILE_SITE_KEY && (
                     <div className="text-sm text-red-500 text-center">
                       ⚠️ Turnstile site key not configured. Check your .env file.
                     </div>

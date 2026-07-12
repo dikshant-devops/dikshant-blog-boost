@@ -3,8 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Code, Zap, Heart, Award, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSEO } from "@/hooks/useSEO";
 
 const About = () => {
+  useSEO({
+    title: "About Dikshant Sharma | DevOps Engineer and Educator",
+    description: "Learn about Dikshant Sharma's DevOps and cloud engineering background, technical focus, and practical teaching approach.",
+    keywords: "Dikshant Sharma, DevOps engineer, cloud architect, technical educator",
+    type: "profile",
+    url: `${window.location.origin}/about`
+  });
+
   const skills = [
     "Docker", "Kubernetes", "AWS", "Azure", "MongoDB", "GitHub Actions", 
     "Terraform", "Postgres", "Jenkins", "Linux", "Python", "Bash", "GCP","Observability"

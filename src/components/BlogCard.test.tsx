@@ -87,6 +87,20 @@ describe('BlogCard', () => {
     expect(screen.getByText('Cloud')).toBeInTheDocument();
   });
 
+  it('does not repeat category or platform labels as tags', () => {
+    const classifiedPost: BlogPost = {
+      ...mockPost,
+      category: 'Containers',
+      platform: 'Docker',
+      tags: ['Docker', 'Containers', 'DevOps']
+    };
+    renderWithRouter(<BlogCard post={classifiedPost} />);
+
+    expect(screen.getAllByText('Docker')).toHaveLength(1);
+    expect(screen.getAllByText('Containers')).toHaveLength(1);
+    expect(screen.getByText('DevOps')).toBeInTheDocument();
+  });
+
   it('should memoize date formatting (component optimization)', () => {
     const { rerender } = renderWithRouter(<BlogCard post={mockPost} />);
 

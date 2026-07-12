@@ -4,8 +4,9 @@ import { BlogCardSkeleton } from "@/components/BlogCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useState, useEffect } from "react";
-import { BookOpen, Zap, Users } from "lucide-react";
+import { BookOpen, Layers, Zap, Users } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
+import { LEARNING_PATHS } from "@/config/taxonomy";
 
 const Index = () => {
   const [featuredPosts, setFeaturedPosts] = useState([]);
@@ -16,14 +17,16 @@ const Index = () => {
     title: "Tech With Dikshant - DevOps Tutorials & Insights",
     description: "Master DevOps with practical tutorials on Docker, Kubernetes, CI/CD, and cloud technologies. Learn from real-world examples and best practices.",
     keywords: "DevOps, Docker, Kubernetes, CI/CD, GitHub Actions, Cloud, Automation, Tutorials",
-    type: "website"
+    type: "website",
+    url: window.location.origin
   });
 
   useEffect(() => {
     const loadPosts = async () => {
       try {
         const posts = await loadMarkdownPosts();
-        setFeaturedPosts(posts.slice(0, 3));
+        const prioritized = [...posts].sort((a, b) => Number(b.featured) - Number(a.featured) || new Date(b.date).getTime() - new Date(a.date).getTime());
+        setFeaturedPosts(prioritized.slice(0, 3));
       } finally {
         setLoading(false);
       }
@@ -41,7 +44,7 @@ const Index = () => {
           </h1>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-white/90">
             Learn modern DevOps practices, cloud technologies, and automation tools 
-            through practical tutorials and real-world examples.
+            through structured learning paths, implementation logs, and real-world examples.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild>
@@ -53,6 +56,38 @@ const Index = () => {
             <Button size="lg" variant="secondary" asChild>
               <Link to="/newsletter">Subscribe to Newsletter</Link>
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Learning Paths */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Structured <span className="text-gradient">DevOps Paths</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Follow day-by-day cloud learning logs or jump into tool-specific CI/CD guides.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {LEARNING_PATHS.map((path) => (
+              <Link
+                key={path.title}
+                to={`/blog?tag=${encodeURIComponent(path.platform)}`}
+                className="rounded-lg border bg-card p-5 transition-all hover:border-primary hover:shadow-card"
+              >
+                <div className="flex items-center gap-2 font-semibold">
+                  <Layers className="h-5 w-5 text-primary" />
+                  {path.title}
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {path.description}
+                </p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

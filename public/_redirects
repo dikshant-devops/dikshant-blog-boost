@@ -1,3 +1,2 @@
-# Netlify redirects file for SPA routing
-/*    /index.html   200
-
+# Cloudflare Pages serves the generated clean-URL HTML files directly.
+# Do not add a catch-all 200 rewrite: unknown URLs must remain real 404s.

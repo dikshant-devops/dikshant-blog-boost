@@ -2,11 +2,18 @@
 title: "Essential Git Commands: A Visual Guide for Developers"
 excerpt: "Master Git with this comprehensive visual guide covering the most important commands every developer needs to know daily."
 date: "2024-01-20"
+updatedDate: "2024-01-20"
+author: "Dikshant Sharma"
+category: "Developer Tools"
+platform: ""
+series: "Developer Workflow"
+seriesOrder: 1
+difficulty: "Beginner"
+image: "/og-default.jpg"
 readTime: "10 min read"
 tags: ["Git", "Version Control", "Developer Tools", "DevOps", "Command Line"]
+tools: ["Git"]
 ---
-
-# Essential Git Commands: A Visual Guide for Developers
 
 Git is the most widely used version control system in software development. Whether you're working solo or with a team, mastering Git commands is essential for efficient code management. This visual guide covers the most important Git commands you'll use daily.
 

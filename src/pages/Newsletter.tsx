@@ -1,8 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Mail, Users, Calendar } from "lucide-react";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { useSEO } from "@/hooks/useSEO";
 
 const Newsletter = () => {
+  useSEO({
+    title: "DevOps Newsletter | Tech With Dikshant",
+    description: "Subscribe for practical DevOps tutorials, cloud engineering notes, CI/CD guidance, and new technical articles.",
+    keywords: "DevOps newsletter, cloud engineering newsletter, CI/CD tutorials",
+    type: "website",
+    url: `${window.location.origin}/newsletter`
+  });
 
   return (
     <>
