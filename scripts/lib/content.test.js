@@ -27,7 +27,7 @@ describe('parseBlogMarkdown', () => {
     expect(post.seriesOrder).toBeUndefined();
   });
 
-  it('accepts an explicit playlist and positive position', () => {
+  it('accepts an explicit series and positive position', () => {
     const post = parseBlogMarkdown(
       'gcp-day-two.md',
       frontmatter('series: "GCP Day by Day"\nseriesOrder: 2\n')
@@ -35,6 +35,16 @@ describe('parseBlogMarkdown', () => {
 
     expect(post.series).toBe('GCP Day by Day');
     expect(post.seriesOrder).toBe(2);
+  });
+
+  it('classifies Cloud Armor as security when category is inferred', () => {
+    const source = frontmatter()
+      .replace('category: "Cloud"\n', '')
+      .replace('## Implementation', '## Cloud Armor security implementation');
+    const post = parseBlogMarkdown('cloud-armor-policy.md', source);
+
+    expect(post.category).toBe('Security');
+    expect(post.platform).toBe('GCP');
   });
 
   it('rejects missing or invalid publication dates', () => {
@@ -54,6 +64,13 @@ describe('parseBlogMarkdown', () => {
       'invalid-order.md',
       frontmatter('seriesOrder: 1\n')
     )).toThrow(/requires a non-empty series/);
+  });
+
+  it('requires an explicit position when a series is supplied', () => {
+    expect(() => parseBlogMarkdown(
+      'missing-series-order.md',
+      frontmatter('series: "Production GCP Security"\n')
+    )).toThrow(/seriesOrder is required/);
   });
 
   it('rejects a second page title in the Markdown body', () => {
@@ -95,5 +112,18 @@ describe('validateBlogPosts', () => {
     );
 
     expect(() => validateBlogPosts([first, second])).toThrow(/Duplicate series position/);
+  });
+
+  it('rejects different series names that resolve to the same route slug', () => {
+    const first = parseBlogMarkdown(
+      'slug-series-one.md',
+      frontmatter('series: "GCP + Security"\nseriesOrder: 1\n')
+    );
+    const second = parseBlogMarkdown(
+      'slug-series-two.md',
+      frontmatter('series: "GCP Security"\nseriesOrder: 2\n')
+    );
+
+    expect(() => validateBlogPosts([first, second])).toThrow(/resolve to the same slug/);
   });
 });

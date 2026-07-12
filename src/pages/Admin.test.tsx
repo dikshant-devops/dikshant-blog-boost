@@ -228,6 +228,37 @@ describe('Admin Page', () => {
       vi.restoreAllMocks();
     });
 
+    it('adds series metadata only after explicit opt-in', async () => {
+      const mockClick = vi.fn();
+      const origCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: any) => {
+        const el = origCreateElement(tag, options);
+        if (tag === 'a') {
+          Object.defineProperty(el, 'click', { value: mockClick, writable: true });
+        }
+        return el;
+      });
+
+      const mockCreateObjectURL = vi.fn().mockReturnValue('blob:test');
+      vi.stubGlobal('URL', { createObjectURL: mockCreateObjectURL, revokeObjectURL: vi.fn() });
+
+      render(<Admin />);
+      fillValidDraft('Production Google Cloud Security Policy Guide');
+      fireEvent.click(screen.getByRole('switch', { name: 'Add to a series' }));
+      fireEvent.change(screen.getByLabelText('Series name'), { target: { value: 'Production GCP Security' } });
+      fireEvent.change(screen.getByLabelText('Part number'), { target: { value: '3' } });
+      fireEvent.click(screen.getByText('Generate Blog Post'));
+
+      const generatedMarkdown = await readBlobAsText(mockCreateObjectURL.mock.calls[0][0] as Blob);
+      const parsed = matter(generatedMarkdown).data;
+
+      expect(parsed.series).toBe('Production GCP Security');
+      expect(parsed.seriesOrder).toBe(3);
+      expect(mockClick).toHaveBeenCalled();
+
+      vi.restoreAllMocks();
+    });
+
     it('generates valid YAML when free-text metadata contains quotes', async () => {
       const mockClick = vi.fn();
       const origCreateElement = document.createElement.bind(document);

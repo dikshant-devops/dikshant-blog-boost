@@ -6,8 +6,6 @@ updatedDate: "2024-12-20"
 author: "Dikshant Sharma"
 category: "CI/CD"
 platform: ""
-series: "CI/CD Tooling"
-seriesOrder: 1
 difficulty: "Intermediate"
 image: "/og-default.jpg"
 readTime: "12 min read"

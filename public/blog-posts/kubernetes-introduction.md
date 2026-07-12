@@ -6,8 +6,6 @@ updatedDate: "2024-12-18"
 author: "Dikshant Sharma"
 category: "Containers"
 platform: "Kubernetes"
-series: "Container Fundamentals"
-seriesOrder: 2
 difficulty: "Beginner"
 image: "/og-default.jpg"
 readTime: "10 min read"

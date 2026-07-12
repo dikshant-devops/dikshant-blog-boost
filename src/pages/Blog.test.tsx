@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Blog from './Blog';
 import * as markdownLoader from '../utils/markdownLoader';
@@ -49,6 +49,7 @@ const mockPosts: BlogPost[] = [
     category: 'Security',
     platform: 'GCP',
     series: 'GCP Day by Day',
+    seriesSlug: 'gcp-day-by-day',
     seriesOrder: 1,
     content: 'GCP content here'
   },
@@ -163,7 +164,7 @@ describe('Blog Page', () => {
     });
   });
 
-  it('should open a selected tag as a playlist-style article collection', async () => {
+  it('shows series and standalone posts uniformly in a selected tag feed', async () => {
     renderWithRouter(<Blog />);
 
     await waitFor(() => {
@@ -179,12 +180,21 @@ describe('Blog Page', () => {
     await waitFor(() => {
       expect(screen.getByText('GCP Articles')).toBeInTheDocument();
       expect(screen.getByText('Selected Tag')).toBeInTheDocument();
-      expect(screen.getByText('GCP Day by Day')).toBeInTheDocument();
-      expect(screen.getByText(/Day 1: GCP Cloud Armor Day 1/i)).toBeInTheDocument();
-      expect(screen.getByText('Individual Articles')).toBeInTheDocument();
-      expect(within(screen.getByTestId('individual-tag-articles')).getByText('GCP IAM Notes')).toBeInTheDocument();
-      expect(within(screen.getByTestId('tag-series-playlists')).queryByText('GCP IAM Notes')).not.toBeInTheDocument();
+      expect(screen.getByText('GCP Cloud Armor Day 1')).toBeInTheDocument();
+      expect(screen.getByText('GCP IAM Notes')).toBeInTheDocument();
+      expect(screen.queryByText('Individual Articles')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('tag-series-playlists')).not.toBeInTheDocument();
       expect(screen.queryByText('Getting Started with Docker')).not.toBeInTheDocument();
+    });
+  });
+
+  it('discovers series separately from the article feed', async () => {
+    renderWithRouter(<Blog />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Series' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /GCP Day by Day/i })).toHaveAttribute('href', '/series/gcp-day-by-day');
+      expect(screen.getByText('GCP IAM Notes')).toBeInTheDocument();
     });
   });
 

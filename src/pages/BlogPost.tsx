@@ -141,17 +141,6 @@ const BlogPost = () => {
     return scored.slice(0, 2).map(s => s.post);
   }, [post, allPosts]);
 
-  const seriesPosts = useMemo(() => {
-    if (!post?.series) return [];
-    return allPosts
-      .filter(item => item.series === post.series)
-      .sort((a, b) => {
-        const aOrder = typeof a.seriesOrder === "number" ? a.seriesOrder : Number.MAX_SAFE_INTEGER;
-        const bOrder = typeof b.seriesOrder === "number" ? b.seriesOrder : Number.MAX_SAFE_INTEGER;
-        return aOrder - bOrder || new Date(a.date).getTime() - new Date(b.date).getTime();
-      });
-  }, [post, allPosts]);
-
   const displayTags = useMemo(() => {
     if (!post) return [];
     const classification = new Set([post.category, post.platform].filter(Boolean));
@@ -337,12 +326,15 @@ const BlogPost = () => {
               <span>{post.readTime}</span>
             </div>
             {post.series && (
-              <div className="flex items-center gap-2">
+              <Link
+                to={`/series/${post.seriesSlug}`}
+                className="flex items-center gap-2 hover:text-primary"
+              >
                 <Layers className="h-4 w-4" />
                 <span>
-                  {post.series}{typeof post.seriesOrder === "number" ? ` · Day ${post.seriesOrder}` : ""}
+                  {post.series}{typeof post.seriesOrder === "number" ? ` · Part ${post.seriesOrder}` : ""}
                 </span>
-              </div>
+              </Link>
             )}
           </div>
         </header>
@@ -360,32 +352,6 @@ const BlogPost = () => {
                 </ReactMarkdown>
               </Suspense>
             </div>
-
-            {seriesPosts.length > 1 && (
-              <div className="mt-12 rounded-lg border bg-card p-5">
-                <h3 className="text-xl font-semibold mb-4">Continue This Series</h3>
-                <div className="space-y-3">
-                  {seriesPosts.map((seriesPost) => (
-                    <Link
-                      key={seriesPost.id}
-                      to={`/blog/${seriesPost.id}`}
-                      className={`flex items-start justify-between gap-4 rounded-md border p-3 transition-colors hover:border-primary ${
-                        seriesPost.id === post.id ? "bg-muted" : ""
-                      }`}
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {typeof seriesPost.seriesOrder === "number" ? `Day ${seriesPost.seriesOrder}: ` : ""}
-                          {seriesPost.title}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{seriesPost.readTime}</p>
-                      </div>
-                      {seriesPost.id === post.id && <Badge variant="secondary">Current</Badge>}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Newsletter Signup */}
             <div className="mt-12 pt-8 border-t">

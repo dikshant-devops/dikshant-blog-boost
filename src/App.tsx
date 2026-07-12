@@ -10,6 +10,7 @@ import { Layout } from "@/components/Layout";
 const Index = lazy(() => import("./pages/Index"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
+const Series = lazy(() => import("./pages/Series"));
 const Newsletter = lazy(() => import("./pages/Newsletter"));
 const About = lazy(() => import("./pages/About"));
 const Connect = lazy(() => import("./pages/Connect"));
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:id" element={<BlogPost />} />
+              <Route path="/series/:seriesSlug" element={<Series />} />
               <Route path="/newsletter" element={<Newsletter />} />
               <Route path="/about" element={<About />} />
               <Route path="/connect" element={<Connect />} />

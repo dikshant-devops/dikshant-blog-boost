@@ -168,12 +168,12 @@ function inferPlatform(tags, content) {
 function inferCategory(tags, content) {
   const source = `${tags.join(' ')} ${content}`.toLowerCase();
   if (source.includes('ci/cd') || source.includes('cicd') || source.includes('github actions') || source.includes('jenkins')) return 'CI/CD';
-  if (source.includes('aws') || source.includes('azure') || source.includes('gcp') || source.includes('google cloud')) return 'Cloud';
+  if (source.includes('security') || source.includes('waf') || source.includes('cloud armor')) return 'Security';
   if (source.includes('docker') || source.includes('kubernetes') || source.includes('container')) return 'Containers';
   if (source.includes('route') || source.includes('load balancer') || source.includes('network')) return 'Networking';
-  if (source.includes('security') || source.includes('waf') || source.includes('cloud armor')) return 'Security';
   if (source.includes('monitoring') || source.includes('observability')) return 'Observability';
   if (source.includes('git ') || source.includes('version control')) return 'Developer Tools';
+  if (source.includes('aws') || source.includes('azure') || source.includes('gcp') || source.includes('google cloud')) return 'Cloud';
   return 'DevOps';
 }
 
@@ -207,7 +207,10 @@ function normalizeDate(value, field, filename, required = false) {
 }
 
 function normalizeSeriesOrder(value, series, filename) {
-  if (value === undefined || value === null || value === '') return undefined;
+  if (value === undefined || value === null || value === '') {
+    if (series) throw new Error(`${filename}: seriesOrder is required when series is set`);
+    return undefined;
+  }
   if (!series) throw new Error(`${filename}: seriesOrder requires a non-empty series`);
 
   const normalized = Number(value);
@@ -325,6 +328,7 @@ export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
 export function validateBlogPosts(posts) {
   const slugs = new Map();
   const seriesPositions = new Map();
+  const seriesNamesBySlug = new Map();
 
   for (const post of posts) {
     if (slugs.has(post.id)) {
@@ -332,8 +336,16 @@ export function validateBlogPosts(posts) {
     }
     slugs.set(post.id, post.fileName);
 
-    if (post.series && post.seriesOrder !== undefined) {
-      const positionKey = `${post.series.toLowerCase()}::${post.seriesOrder}`;
+    if (post.series) {
+      const existingSeries = seriesNamesBySlug.get(post.seriesSlug);
+      if (existingSeries && existingSeries.name !== post.series) {
+        throw new Error(
+          `Series names "${existingSeries.name}" and "${post.series}" resolve to the same slug "${post.seriesSlug}" in ${existingSeries.fileName} and ${post.fileName}`
+        );
+      }
+      seriesNamesBySlug.set(post.seriesSlug, { name: post.series, fileName: post.fileName });
+
+      const positionKey = `${post.seriesSlug}::${post.seriesOrder}`;
       if (seriesPositions.has(positionKey)) {
         throw new Error(
           `Duplicate series position ${post.series} #${post.seriesOrder} in ${seriesPositions.get(positionKey)} and ${post.fileName}`

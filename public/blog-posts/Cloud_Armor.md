@@ -4,10 +4,8 @@ excerpt: "Learn how Google Cloud Armor protects internet-facing workloads with W
 date: "2025-01-05"
 updatedDate: "2025-01-05"
 author: "Dikshant Sharma"
-category: "Cloud"
+category: "Security"
 platform: "GCP"
-series: "GCP Day by Day"
-seriesOrder: 1
 difficulty: "Intermediate"
 image: "/og-default.jpg"
 tags: ["GCP", "Cloud Armor", "Security", "Load Balancer", "Networking"]

@@ -6,8 +6,6 @@ updatedDate: "2024-12-15"
 author: "Dikshant Sharma"
 category: "Containers"
 platform: "Docker"
-series: "Container Fundamentals"
-seriesOrder: 1
 difficulty: "Beginner"
 image: "/og-default.jpg"
 readTime: "8 min read"

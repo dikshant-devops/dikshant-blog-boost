@@ -34,15 +34,13 @@ Create a file like `my-awesome-post.md`:
 
 ```markdown
 ---
-title: "Deploy Applications with Docker and Kubernetes"
-excerpt: "A tested application deployment guide using Docker and Kubernetes, including verification commands, observed results, and rollback steps."
+title: "Configure Cloud Armor for Production Workloads"
+excerpt: "A tested Cloud Armor security guide with policy configuration, verification commands, observed results, and rollback steps."
 date: "2024-01-20"
 readTime: "8 min read"
 author: "Dikshant Sharma"
-category: "Cloud"
+category: "Security"
 platform: "GCP"
-series: "GCP Day by Day"
-seriesOrder: 1
 difficulty: "Beginner"
 tools: ["Cloud Armor", "Load Balancer"]
 tags: ["GCP", "Security", "Cloud Armor"]
@@ -73,10 +71,10 @@ First, install Docker...
 | `author` | String | `"Dikshant Sharma"` | Author displayed in metadata and schema |
 | `readTime` | String | `"5 min read"` | Optional override; otherwise calculated at 200 words/minute |
 | `tags` | Array | `["GCP", "Security"]` | 1-8 unique public navigation tags |
-| `category` | String | `"Cloud"` | Main section: Cloud, CI/CD, Containers, Networking, Security, Developer Tools, Observability, DevOps |
+| `category` | String | `"Security"` | Broad engineering concern: Cloud, CI/CD, Containers, Networking, Security, Developer Tools, Observability, DevOps |
 | `platform` | String | `"GCP"` | Provider/platform for filtering: GCP, AWS, Azure, Kubernetes, Docker |
-| `series` | String | `"GCP Day by Day"` | Optional playlist name inside a selected tag view |
-| `seriesOrder` | Number | `1` | Day/order within the series, only used when `series` is set |
+| `series` | String | `"Production GCP Security"` | Optional ordered collection name; omit for a standalone article |
+| `seriesOrder` | Number | `1` | Part number in the series; only valid when `series` is set |
 | `difficulty` | String | `"Beginner"` | Beginner, Intermediate, or Advanced |
 | `tools` | Array | `["GitHub Actions"]` | Tools covered in the article |
 | `image` | String | `"/og-default.jpg"` | JPEG, PNG, or WebP social image; local file must exist |
@@ -92,8 +90,6 @@ readTime: "5 min read"
 tags: ["Tag1", "Tag2", "Tag3"]
 category: "CI/CD"
 platform: ""
-series: "CI/CD Tooling"
-seriesOrder: 1
 difficulty: "Intermediate"
 tools: ["Jenkins", "GitHub Actions"]
 ---
@@ -113,11 +109,18 @@ tools: ["Jenkins", "GitHub Actions"]
 
 ## Tags System
 
-Tags are the primary reader-facing navigation on `/blog`. If a post has `tags: ["GCP", "Security"]`, selecting the `GCP` tag opens a `GCP Articles` view. Posts with `series` are grouped there so a sequence like `GCP Day by Day` works like a YouTube playlist. Posts without `series` remain normal article cards in the same tag view.
+Tags are the primary reader-facing discovery mechanism on `/blog`. If a post has `tags: ["GCP", "Security", "Cloud Armor"]`, it appears as a normal article card in all three tag feeds. Cloud Armor is a GCP security service: use `category: "Security"`, `platform: "GCP"`, and `Cloud Armor` as a tool/tag.
 
-Use tags for top-level discovery. Add `series` plus `seriesOrder` only when the post should belong to a playlist. Leave `series` blank or omit it for a regular standalone article.
+Articles are standalone by default. Add `series` plus `seriesOrder` only when the article should also belong to a separately published ordered collection at `/series/<series-slug>`:
 
-The blog displays tags in this order: core topics, cloud platforms, containers, delivery, operations, then developer tools. Keep difficulty values like `Beginner` in the `difficulty` field, not in `tags`.
+```yaml
+series: "Production GCP Security"
+seriesOrder: 1
+```
+
+Series membership never changes how the article appears in a tag feed. In the local `/admin` authoring tool, turn on **Add to a series** explicitly before entering these fields.
+
+The blog displays tags in this order: core topics, platforms, tools and services, then development. Keep difficulty values like `Beginner` in the `difficulty` field, not in `tags`.
 
 ### Available Tags
 

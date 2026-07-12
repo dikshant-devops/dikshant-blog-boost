@@ -96,7 +96,7 @@ function renderMarkdown(post, markdown) {
   );
 }
 
-function renderStaticArticle(post, markdown, posts) {
+function renderStaticArticle(post, markdown) {
   const renderedMarkdown = renderMarkdown(post, markdown);
   const formattedDate = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
@@ -105,20 +105,8 @@ function renderStaticArticle(post, markdown, posts) {
     timeZone: 'UTC'
   }).format(new Date(`${post.date}T00:00:00Z`));
   const tags = post.tags.map(tag => `<span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold">${htmlEscape(tag)}</span>`).join('');
-  const seriesPosts = post.series
-    ? posts
-      .filter(candidate => candidate.series === post.series)
-      .sort((a, b) => (a.seriesOrder ?? Number.MAX_SAFE_INTEGER) - (b.seriesOrder ?? Number.MAX_SAFE_INTEGER))
-    : [];
-  const seriesMarkup = seriesPosts.length > 1
-    ? `<section aria-labelledby="series-heading" class="mt-12 rounded-lg border p-5">
-        <h2 id="series-heading" class="mb-4 text-xl font-semibold">Continue This Series</h2>
-        <ol class="space-y-3">${seriesPosts.map(seriesPost => `
-          <li><a href="/blog/${encodeURIComponent(seriesPost.id)}" class="block rounded-md border p-3">
-            ${seriesPost.seriesOrder ? `Day ${seriesPost.seriesOrder}: ` : ''}${htmlEscape(seriesPost.title)}
-          </a></li>`).join('')}
-        </ol>
-      </section>`
+  const seriesMarkup = post.series && post.seriesSlug
+    ? `<p class="mt-3"><a href="/series/${encodeURIComponent(post.seriesSlug)}">${htmlEscape(post.series)}${post.seriesOrder ? ` · Part ${post.seriesOrder}` : ''}</a></p>`
     : '';
 
   return `<div id="root">
@@ -129,15 +117,15 @@ function renderStaticArticle(post, markdown, posts) {
           <div class="mb-4 flex flex-wrap gap-2">${tags}</div>
           <h1 class="mb-4 text-3xl font-bold leading-tight md:text-4xl lg:text-5xl">${htmlEscape(post.title)}</h1>
           <p class="text-muted-foreground"><time datetime="${htmlEscape(post.date)}">${formattedDate}</time> · ${htmlEscape(post.readTime)}</p>
+          ${seriesMarkup}
         </header>
         <div class="prose prose-lg max-w-none dark:prose-invert">${renderedMarkdown}</div>
-        ${seriesMarkup}
       </article>
     </main>
   </div>`;
 }
 
-export function renderArticleHtml(shell, post, markdown, posts = [post]) {
+export function renderArticleHtml(shell, post, markdown) {
   const keywords = [...new Set([post.category, post.platform, ...post.tools, ...post.tags].filter(Boolean))].join(', ');
   const image = post.image?.startsWith('http')
     ? post.image
@@ -189,11 +177,101 @@ export function renderArticleHtml(shell, post, markdown, posts = [post]) {
     articleSection: post.category,
     timeRequired: post.readTime
   });
-  html = html.replace('<div id="root"></div>', renderStaticArticle(post, markdown, posts));
+  html = html.replace('<div id="root"></div>', renderStaticArticle(post, markdown));
   return html;
 }
 
+function collectSeries(posts) {
+  const collections = new Map();
+  for (const post of posts) {
+    if (!post.series || !post.seriesSlug) continue;
+    const existing = collections.get(post.seriesSlug) || {
+      name: post.series,
+      slug: post.seriesSlug,
+      posts: []
+    };
+    existing.posts.push(post);
+    collections.set(post.seriesSlug, existing);
+  }
+
+  return Array.from(collections.values())
+    .map(series => ({
+      ...series,
+      posts: series.posts.sort((a, b) =>
+        (a.seriesOrder ?? Number.MAX_SAFE_INTEGER) - (b.seriesOrder ?? Number.MAX_SAFE_INTEGER)
+        || new Date(a.date).getTime() - new Date(b.date).getTime()
+      )
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function renderStaticSeries(series) {
+  const articles = series.posts.map((post, index) => `
+    <li>
+      <a href="/blog/${encodeURIComponent(post.id)}" class="block rounded-md border p-5">
+        <p class="mb-2 text-sm font-semibold">Part ${post.seriesOrder ?? index + 1}</p>
+        <h2 class="mb-2 text-xl font-semibold">${htmlEscape(post.title)}</h2>
+        <p class="text-muted-foreground">${htmlEscape(post.excerpt)}</p>
+      </a>
+    </li>`).join('');
+
+  return `<div id="root">
+    <main data-prerendered="series" class="container mx-auto max-w-4xl px-4 py-10">
+      <nav aria-label="Breadcrumb" class="mb-8 text-sm"><a href="/blog">Back to Blog</a></nav>
+      <header class="mb-10 border-b pb-8">
+        <p class="mb-3 text-sm font-semibold">Series</p>
+        <h1 class="text-3xl font-bold md:text-4xl">${htmlEscape(series.name)}</h1>
+        <p class="mt-3 text-muted-foreground">${series.posts.length} ordered ${series.posts.length === 1 ? 'article' : 'articles'}.</p>
+      </header>
+      <ol class="space-y-4">${articles}</ol>
+    </main>
+  </div>`;
+}
+
+export function renderSeriesHtml(shell, series) {
+  const canonicalUrl = `https://techwithdikshant.com/series/${series.slug}`;
+  const title = `${series.name} Series | Tech With Dikshant`;
+  const description = `Read ${series.posts.length} ordered ${series.posts.length === 1 ? 'article' : 'articles'} in the ${series.name} technical series.`;
+  let html = shell.replace(/<title>[^<]*<\/title>/i, `<title>${htmlEscape(title)}</title>`);
+  html = replaceOrInsertMeta(html, 'name=description', description);
+  html = replaceOrInsertMeta(html, 'name=author', 'Dikshant Sharma');
+  html = replaceOrInsertMeta(html, 'property=og:title', title);
+  html = replaceOrInsertMeta(html, 'property=og:description', description);
+  html = replaceOrInsertMeta(html, 'property=og:type', 'website');
+  html = replaceOrInsertMeta(html, 'property=og:url', canonicalUrl);
+  html = replaceOrInsertMeta(html, 'name=twitter:title', title);
+  html = replaceOrInsertMeta(html, 'name=twitter:description', description);
+  html = replaceCanonical(html, canonicalUrl);
+  html = injectStructuredData(html, {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: series.name,
+    description,
+    url: canonicalUrl,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: series.posts.length,
+      itemListElement: series.posts.map((post, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: post.canonicalUrl,
+        name: post.title
+      }))
+    }
+  }, 'series');
+  return html.replace('<div id="root"></div>', renderStaticSeries(series));
+}
+
 function renderStaticBlogListing(posts) {
+  const series = collectSeries(posts);
+  const seriesMarkup = series.length > 0
+    ? `<section aria-labelledby="series-heading" class="mb-10 border-y py-6">
+        <h2 id="series-heading" class="mb-4 text-xl font-semibold">Series</h2>
+        <ul class="grid grid-cols-1 gap-3 md:grid-cols-2">${series.map(item => `
+          <li><a href="/series/${encodeURIComponent(item.slug)}" class="flex justify-between rounded-md border p-4"><span>${htmlEscape(item.name)}</span><span>${item.posts.length} ${item.posts.length === 1 ? 'part' : 'parts'}</span></a></li>`).join('')}
+        </ul>
+      </section>`
+    : '';
   const articles = posts.map(post => `
     <article class="rounded-lg border bg-card p-5">
       <p class="mb-2 text-sm text-muted-foreground"><time datetime="${htmlEscape(post.date)}">${htmlEscape(post.date)}</time> · ${htmlEscape(post.readTime)}</p>
@@ -206,8 +284,9 @@ function renderStaticBlogListing(posts) {
     <main data-prerendered="blog-listing" class="container mx-auto px-4 py-12">
       <header class="mx-auto mb-12 max-w-3xl text-center">
         <h1 class="mb-4 text-4xl font-bold md:text-5xl">DevOps Blog</h1>
-        <p class="text-xl text-muted-foreground">Cloud implementation logs, CI/CD notes, and hands-on technical tutorials organized by tags and series.</p>
+        <p class="text-xl text-muted-foreground">Cloud implementation logs, CI/CD notes, and hands-on technical tutorials organized by tags.</p>
       </header>
+      ${seriesMarkup}
       <section aria-label="Latest articles" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">${articles}</section>
     </main>
   </div>`;
@@ -255,7 +334,7 @@ const STATIC_PAGES = [
     title: 'Tech With Dikshant - DevOps Tutorials & Insights',
     description: 'Master DevOps with practical tutorials on Docker, Kubernetes, CI/CD, cloud platforms, networking, security, and automation.',
     heading: 'Master DevOps with Dikshant',
-    body: 'Structured learning paths, implementation logs, and hands-on technical guides grounded in real engineering work.'
+    body: 'Independent implementation logs and hands-on technical guides grounded in real engineering work.'
   },
   {
     route: '/about',
@@ -365,7 +444,7 @@ async function main() {
     ]);
     const fullPost = { ...post, ...JSON.parse(detailsJson) };
     const markdown = matter(rawMarkdown).content.trim();
-    const articleHtml = renderArticleHtml(shell, fullPost, markdown, posts);
+    const articleHtml = renderArticleHtml(shell, fullPost, markdown);
     const routeDir = join(DIST_DIR, 'blog', post.slug);
     await mkdir(routeDir, { recursive: true });
     await Promise.all([
@@ -380,6 +459,19 @@ async function main() {
     writeFile(join(DIST_DIR, 'blog.html'), blogIndexHtml)
   ]);
 
+  const seriesDir = join(DIST_DIR, 'series');
+  const seriesCollections = collectSeries(posts);
+  if (seriesCollections.length > 0) await mkdir(seriesDir, { recursive: true });
+  for (const series of seriesCollections) {
+    const seriesHtml = renderSeriesHtml(shell, series);
+    const routeDir = join(seriesDir, series.slug);
+    await mkdir(routeDir, { recursive: true });
+    await Promise.all([
+      writeFile(join(routeDir, 'index.html'), seriesHtml),
+      writeFile(join(seriesDir, `${series.slug}.html`), seriesHtml)
+    ]);
+  }
+
   for (const page of STATIC_PAGES) {
     const pageHtml = renderStaticPageHtml(shell, page, posts);
     if (page.route === '/') {
@@ -389,7 +481,7 @@ async function main() {
     }
   }
   await writeFile(join(DIST_DIR, '404.html'), renderNotFoundHtml(shell));
-  console.log(`Prerendered ${posts.length} blog article shells.`);
+  console.log(`Prerendered ${posts.length} blog articles and ${seriesCollections.length} series.`);
 }
 
 const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;

@@ -64,11 +64,10 @@ describe('tag ordering', () => {
   });
 
   it('groups visible tags by reader-facing sections', () => {
-    expect(getOrderedTagGroups(['Docker', 'GCP', 'DevOps', 'GitHub Actions'])).toEqual([
+    expect(getOrderedTagGroups(['Docker', 'GCP', 'DevOps', 'GitHub Actions', 'Cloud Armor'])).toEqual([
       { title: 'Core Topics', tags: ['DevOps'] },
-      { title: 'Cloud Platforms', tags: ['GCP'] },
-      { title: 'Containers', tags: ['Docker'] },
-      { title: 'Delivery', tags: ['GitHub Actions'] },
+      { title: 'Platforms', tags: ['GCP', 'Docker'] },
+      { title: 'Tools & Services', tags: ['Cloud Armor', 'GitHub Actions'] },
     ]);
   });
 });

@@ -6,8 +6,6 @@ updatedDate: "2025-01-06"
 author: "Dikshant Sharma"
 category: "Networking"
 platform: "AWS"
-series: "AWS Day by Day"
-seriesOrder: 1
 difficulty: "Beginner"
 image: "/og-default.jpg"
 tags: ["AWS", "Load Balancer", "Networking", "DevOps"]

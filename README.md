@@ -31,7 +31,7 @@ See [HOW_TO_ADD_BLOG_POSTS.md](./HOW_TO_ADD_BLOG_POSTS.md) for detailed instruct
 
 **Quick steps:**
 1. Create a `.md` file in `/public/blog-posts/`
-2. Add structured frontmatter for category, platform, series, tools, and tags
+2. Add structured frontmatter for category, platform, tools, and tags
 3. Write your content in Markdown
 4. Run `npm run content:index` for local preview, or let `npm run build` regenerate content artifacts automatically
 
@@ -54,7 +54,9 @@ Start the article introduction here. The frontmatter title is rendered as the pa
 ## First Tested Step
 ```
 
-Tags drive the public navigation on the blog page. For example, `tags: ["GCP", "Security"]` makes the post appear in the `/blog?tag=GCP` view. Posts with `series` are grouped there like a playlist; posts without `series` stay as regular article cards. The blog renders tags in a fixed taxonomy order: core topics, cloud platforms, containers, delivery, operations, then developer tools.
+Tags drive public discovery. For example, `tags: ["GCP", "Security", "Cloud Armor"]` makes the same standalone article appear in each matching tag feed. Every tag feed is a normal date-ordered article list.
+
+Series are separate and optional. Add `series` and `seriesOrder` only when an article is intentionally part of an ordered collection. Series are published at `/series/<series-slug>` and never replace or partition tag feeds.
 
 ## 🛠️ Development Commands
 
@@ -114,7 +116,7 @@ npm run test:coverage
 
 ### Features
 - **Markdown Support** - Full GitHub Flavored Markdown
-- **Tag Collections** - Public tag views with playlist-style series grouping
+- **Tags and Series** - Uniform tag feeds plus separate, explicitly assigned ordered series
 - **SEO Optimized** - Sitemap, RSS, canonical URLs, Open Graph, and per-post structured data shells
 - **Dark/Light Mode** - Theme switching with persistence
 - **Performance** - Build-time content index, cache-first loading, code-splitting, memoization

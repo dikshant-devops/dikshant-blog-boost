@@ -55,7 +55,7 @@ export const BlogCard = memo(({ post }: BlogCardProps) => {
             <div className="flex items-center gap-2 text-sm text-primary">
               <Layers className="h-4 w-4" />
               <span className="line-clamp-1">
-                {post.series}{typeof post.seriesOrder === "number" ? ` · Day ${post.seriesOrder}` : ""}
+                {post.series}{typeof post.seriesOrder === "number" ? ` · Part ${post.seriesOrder}` : ""}
               </span>
             </div>
           )}

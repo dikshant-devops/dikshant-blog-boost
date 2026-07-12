@@ -6,6 +6,7 @@ import App from './App';
 vi.mock('./pages/Index', () => ({ default: () => <div>Home Page</div> }));
 vi.mock('./pages/Blog', () => ({ default: () => <div>Blog Page</div> }));
 vi.mock('./pages/BlogPost', () => ({ default: () => <div>Blog Post Page</div> }));
+vi.mock('./pages/Series', () => ({ default: () => <div>Series Page</div> }));
 vi.mock('./pages/Newsletter', () => ({ default: () => <div>Newsletter Page</div> }));
 vi.mock('./pages/About', () => ({ default: () => <div>About Page</div> }));
 vi.mock('./pages/Connect', () => ({ default: () => <div>Connect Page</div> }));
@@ -55,6 +56,14 @@ describe('App', () => {
     render(<App />);
     await waitFor(() => {
       expect(screen.getByText('About Page')).toBeInTheDocument();
+    });
+  });
+
+  it('renders a series at /series/:seriesSlug', async () => {
+    window.history.pushState({}, '', '/series/production-gcp-security');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('Series Page')).toBeInTheDocument();
     });
   });
 

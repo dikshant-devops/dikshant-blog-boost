@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderArticleHtml, renderBlogIndexHtml, renderNotFoundHtml, renderStaticPageHtml } from './prerender-blog-pages.js';
+import { renderArticleHtml, renderBlogIndexHtml, renderNotFoundHtml, renderSeriesHtml, renderStaticPageHtml } from './prerender-blog-pages.js';
 
 const shell = `<!doctype html>
 <html>
@@ -23,7 +23,7 @@ const post = {
   readTime: '3 min read',
   author: 'Dikshant Sharma',
   tags: ['GCP', 'Security'],
-  category: 'Cloud',
+  category: 'Security',
   platform: 'GCP',
   tools: ['Cloud Armor'],
   series: '',
@@ -69,6 +69,29 @@ describe('renderBlogIndexHtml', () => {
     expect(html).toContain('<link rel="canonical" href="https://techwithdikshant.com/blog"');
     expect(html).toContain('data-structured-data="blog-listing"');
     expect(html.match(/<div id="root">/g)).toHaveLength(1);
+  });
+});
+
+describe('renderSeriesHtml', () => {
+  it('renders an ordered crawlable collection with canonical metadata', () => {
+    const seriesPost = {
+      ...post,
+      series: 'Production GCP Security',
+      seriesSlug: 'production-gcp-security',
+      seriesOrder: 1,
+    };
+    const html = renderSeriesHtml(shell, {
+      name: seriesPost.series,
+      slug: seriesPost.seriesSlug,
+      posts: [seriesPost],
+    });
+
+    expect(html).toContain('data-prerendered="series"');
+    expect(html).toContain('<h1 class="text-3xl font-bold md:text-4xl">Production GCP Security</h1>');
+    expect(html).toContain('href="/blog/production-note"');
+    expect(html).toContain('Part 1');
+    expect(html).toContain('<link rel="canonical" href="https://techwithdikshant.com/series/production-gcp-security"');
+    expect(html).toContain('data-structured-data="series"');
   });
 });
 

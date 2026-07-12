@@ -98,6 +98,19 @@ export async function verifyBuild() {
     assert(new Set(ids).size === ids.length, `${post.id}: duplicate HTML IDs found`);
   }
 
+  const seriesSlugs = [...new Set(posts.map(post => post.seriesSlug).filter(Boolean))];
+  for (const seriesSlug of seriesSlugs) {
+    const canonical = `https://techwithdikshant.com/series/${seriesSlug}`;
+    const routePath = join(DIST, 'series', seriesSlug, 'index.html');
+    const flatPath = join(DIST, 'series', `${seriesSlug}.html`);
+    const html = await verifyHtmlFile(routePath, 'data-prerendered="series"', canonical);
+    const flatHtml = await readFile(flatPath, 'utf8');
+
+    assert(flatHtml === html, `${seriesSlug}: clean and trailing-slash series output differs`);
+    assert(count(html, /data-structured-data="series"/g) === 1, `${seriesSlug}: expected one series schema`);
+    assert(sitemap.includes(`<loc>${canonical}</loc>`), `${seriesSlug}: missing from sitemap`);
+  }
+
   const assetFiles = (await readdir(join(DIST, 'assets'))).filter(file => file.endsWith('.js') || file.endsWith('.css'));
   assert(!assetFiles.some(file => /admin/i.test(file)), 'Admin code is present in the production assets');
   assert(!assetFiles.some(file => /query/i.test(file)), 'Unused query library chunk is present');
@@ -128,7 +141,7 @@ export async function verifyBuild() {
     assert(functionRoutes.include.includes(route), `Function route missing from _routes.json: ${route}`);
   }
 
-  console.log(`Verified ${posts.length} articles, ${assetFiles.length} assets, and ${totalJsGzip} bytes of gzipped JavaScript.`);
+  console.log(`Verified ${posts.length} articles, ${seriesSlugs.length} series, ${assetFiles.length} assets, and ${totalJsGzip} bytes of gzipped JavaScript.`);
 }
 
 const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;

@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { X, Plus, FileText, Calendar } from "lucide-react";
-import { BLOG_CATEGORIES, BLOG_DIFFICULTIES, CLOUD_PLATFORMS, DEVOPS_TOOLS, LEARNING_PATHS } from "@/config/taxonomy";
+import { BLOG_CATEGORIES, BLOG_DIFFICULTIES, BLOG_PLATFORMS, DEVOPS_TOOLS } from "@/config/taxonomy";
 import { validateBlogDraft } from "@/lib/blogDraftValidation";
 
 const Admin = () => {
@@ -16,6 +17,7 @@ const Admin = () => {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("DevOps");
   const [platform, setPlatform] = useState("");
+  const [includeInSeries, setIncludeInSeries] = useState(false);
   const [series, setSeries] = useState("");
   const [seriesOrder, setSeriesOrder] = useState("");
   const [difficulty, setDifficulty] = useState("Beginner");
@@ -51,22 +53,6 @@ const Admin = () => {
     setTools(tools.filter(tool => tool !== toolToRemove));
   };
 
-  const applyLearningPath = (pathTitle: string) => {
-    const path = LEARNING_PATHS.find(item => item.title === pathTitle);
-    if (!path) return;
-
-    setSeries(path.title);
-    if (path.platform === "CI/CD") {
-      setCategory("CI/CD");
-      setPlatform("");
-      setTags(prev => Array.from(new Set([...prev, "CI/CD", "DevOps"])));
-    } else {
-      setCategory("Cloud");
-      setPlatform(path.platform);
-      setTags(prev => Array.from(new Set([...prev, path.platform, "Cloud", "DevOps"])));
-    }
-  };
-
   const generateSlug = (title: string) => {
     return title.toLowerCase()
       .replace(/[^a-z0-9 -]/g, '')
@@ -79,7 +65,18 @@ const Admin = () => {
   const yamlList = (values: string[]) => JSON.stringify(values.map(value => value.trim()).filter(Boolean));
 
   const generateMarkdownFile = () => {
-    const errors = validateBlogDraft({ title, excerpt, content, author, image, tags, series, seriesOrder });
+    const selectedSeries = includeInSeries ? series : "";
+    const selectedSeriesOrder = includeInSeries ? seriesOrder : "";
+    const errors = validateBlogDraft({
+      title,
+      excerpt,
+      content,
+      author,
+      image,
+      tags,
+      series: selectedSeries,
+      seriesOrder: selectedSeriesOrder
+    });
     if (errors.length > 0) {
       toast({
         title: "Fix validation errors",
@@ -91,7 +88,7 @@ const Admin = () => {
 
     const slug = generateSlug(title);
     const date = publishDate || new Date().toISOString().split('T')[0];
-    const normalizedSeries = series.trim();
+    const normalizedSeries = selectedSeries.trim();
     const seriesFrontmatter = normalizedSeries
       ? `series: ${yamlString(normalizedSeries)}
 seriesOrder: ${seriesOrder || 1}
@@ -138,6 +135,7 @@ ${content}`;
     setContent("");
     setCategory("DevOps");
     setPlatform("");
+    setIncludeInSeries(false);
     setSeries("");
     setSeriesOrder("");
     setDifficulty("Beginner");
@@ -190,23 +188,6 @@ ${content}`;
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
                 />
-              </div>
-            </div>
-
-            <div>
-              <Label>Learning Path Template</Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {LEARNING_PATHS.map((path) => (
-                  <Button
-                    key={path.title}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyLearningPath(path.title)}
-                  >
-                    {path.title}
-                  </Button>
-                ))}
               </div>
             </div>
 
@@ -267,7 +248,7 @@ ${content}`;
                   className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="">Provider/Platform</option>
-                  {CLOUD_PLATFORMS.map((item) => (
+                  {BLOG_PLATFORMS.map((item) => (
                     <option key={item} value={item}>{item}</option>
                   ))}
                 </select>
@@ -287,27 +268,52 @@ ${content}`;
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="series">Series (optional)</Label>
-                <Input
-                  id="series"
-                  placeholder="Leave blank for a regular article"
-                  value={series}
-                  onChange={(e) => setSeries(e.target.value)}
+            <div className="space-y-4 rounded-md border p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="includeInSeries">Add to a series</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Keep this off for a standalone article.
+                  </p>
+                </div>
+                <Switch
+                  id="includeInSeries"
+                  checked={includeInSeries}
+                  onCheckedChange={(checked) => {
+                    setIncludeInSeries(checked);
+                    if (checked && !seriesOrder) setSeriesOrder("1");
+                    if (!checked) {
+                      setSeries("");
+                      setSeriesOrder("");
+                    }
+                  }}
                 />
               </div>
-              <div>
-                <Label htmlFor="seriesOrder">Day / Order</Label>
-                <Input
-                  id="seriesOrder"
-                  type="number"
-                  min="1"
-                  placeholder="1"
-                  value={seriesOrder}
-                  onChange={(e) => setSeriesOrder(e.target.value)}
-                />
-              </div>
+
+              {includeInSeries && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="md:col-span-2">
+                    <Label htmlFor="series">Series name</Label>
+                    <Input
+                      id="series"
+                      placeholder="Example: Production GCP Security"
+                      value={series}
+                      onChange={(e) => setSeries(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="seriesOrder">Part number</Label>
+                    <Input
+                      id="seriesOrder"
+                      type="number"
+                      min="1"
+                      placeholder="1"
+                      value={seriesOrder}
+                      onChange={(e) => setSeriesOrder(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

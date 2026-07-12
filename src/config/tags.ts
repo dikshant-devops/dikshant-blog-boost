@@ -116,27 +116,19 @@ export const TAG_CONFIGS: Record<string, TagConfig> = {
 export const TAG_GROUPS: TagGroup[] = [
   {
     title: 'Core Topics',
-    tags: ['DevOps', 'Cloud']
+    tags: ['DevOps', 'Cloud', 'Security', 'Networking', 'Containers', 'CI/CD', 'Automation', 'Orchestration', 'Monitoring']
   },
   {
-    title: 'Cloud Platforms',
-    tags: ['GCP', 'AWS', 'Azure', 'Cloud Armor']
+    title: 'Platforms',
+    tags: ['GCP', 'AWS', 'Azure', 'Kubernetes', 'Docker']
   },
   {
-    title: 'Containers',
-    tags: ['Docker', 'Kubernetes', 'Containers', 'Orchestration']
+    title: 'Tools & Services',
+    tags: ['Cloud Armor', 'Load Balancer', 'GitHub Actions', 'Jenkins', 'Terraform', 'Ansible']
   },
   {
-    title: 'Delivery',
-    tags: ['CI/CD', 'GitHub Actions', 'Jenkins', 'Automation']
-  },
-  {
-    title: 'Operations',
-    tags: ['Networking', 'Load Balancer', 'Security', 'Monitoring']
-  },
-  {
-    title: 'Developer Tools',
-    tags: ['Git', 'GitHub', 'Version Control', 'Command Line', 'Developer Tools', 'Terraform', 'Ansible']
+    title: 'Development',
+    tags: ['Developer Tools', 'Git', 'GitHub', 'Version Control', 'Command Line']
   }
 ];
 

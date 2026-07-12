@@ -11,8 +11,8 @@
  */
 
 import { access, mkdir, readdir, readFile, rm, writeFile } from 'fs/promises';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join, dirname, resolve } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { SITE_URL, parseBlogMarkdown, validateBlogPosts } from './lib/content.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,7 +39,7 @@ function xmlEscape(value) {
     .replace(/'/g, '&apos;');
 }
 
-function buildSitemap(posts) {
+export function buildSitemap(posts) {
   const siteUrl = SITE_URL.replace(/\/$/, '');
   const staticUrls = STATIC_ROUTES.map(route => ({
     loc: `${siteUrl}${route === '/' ? '' : route}`,
@@ -51,8 +51,21 @@ function buildSitemap(posts) {
     lastmod: post.updatedDate || post.date,
     priority: '0.9'
   }));
+  const seriesBySlug = new Map();
+  for (const post of posts) {
+    if (!post.series || !post.seriesSlug) continue;
+    const existing = seriesBySlug.get(post.seriesSlug);
+    const lastmod = post.updatedDate || post.date;
+    if (!existing || lastmod > existing.lastmod) {
+      seriesBySlug.set(post.seriesSlug, {
+        loc: `${siteUrl}/series/${post.seriesSlug}`,
+        lastmod,
+        priority: '0.7'
+      });
+    }
+  }
 
-  const urls = [...staticUrls, ...postUrls]
+  const urls = [...staticUrls, ...seriesBySlug.values(), ...postUrls]
     .map(item => [
       '  <url>',
       `    <loc>${xmlEscape(item.loc)}</loc>`,
@@ -81,7 +94,7 @@ function buildRss(posts) {
     ].join('\n'))
     .join('\n');
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>Tech With Dikshant</title>\n    <link>${xmlEscape(siteUrl)}</link>\n    <description>DevOps tutorials, cloud learning paths, CI/CD guides, and technical implementation logs.</description>\n    <language>en-us</language>\n    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n${items}\n  </channel>\n</rss>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>Tech With Dikshant</title>\n    <link>${xmlEscape(siteUrl)}</link>\n    <description>DevOps tutorials, cloud engineering notes, CI/CD guides, and technical implementation logs.</description>\n    <language>en-us</language>\n    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n${items}\n  </channel>\n</rss>\n`;
 }
 
 function buildRobots() {
@@ -166,4 +179,5 @@ async function generateManifest() {
   }
 }
 
-generateManifest();
+const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isDirectExecution) generateManifest();

@@ -6,8 +6,6 @@ updatedDate: "2024-01-20"
 author: "Dikshant Sharma"
 category: "Developer Tools"
 platform: ""
-series: "Developer Workflow"
-seriesOrder: 1
 difficulty: "Beginner"
 image: "/og-default.jpg"
 readTime: "10 min read"
