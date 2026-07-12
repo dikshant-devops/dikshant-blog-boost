@@ -1,8 +1,13 @@
-const ALLOWED_ORIGINS = ['https://techwithdikshant.com', 'http://localhost:8080'];
+const PRODUCTION_ORIGINS = ['https://techwithdikshant.com'];
+const LOCAL_ORIGIN_PATTERN = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/;
+const MAX_BODY_BYTES = 4096;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_TURNSTILE_TOKEN_LENGTH = 2048;
+const TURNSTILE_ACTION = 'newsletter_subscribe';
 
 function getCorsOrigin(request) {
   const origin = request.headers.get('Origin') || '';
-  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return isAllowedOriginValue(origin) ? origin : PRODUCTION_ORIGINS[0];
 }
 
 function corsHeaders(request) {
@@ -18,6 +23,48 @@ function corsHeaders(request) {
 function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
+}
+
+function isAllowedOriginValue(origin) {
+  return PRODUCTION_ORIGINS.includes(origin) || LOCAL_ORIGIN_PATTERN.test(origin);
+}
+
+function isAllowedOrigin(request) {
+  const origin = request.headers.get('Origin');
+  return !origin || isAllowedOriginValue(origin);
+}
+
+function getClientKey(request) {
+  return request.headers.get('CF-Connecting-IP') || 'unknown';
+}
+
+async function verifyTurnstile(token, env, request) {
+  if (!env.TURNSTILE_SECRET_KEY) {
+    console.error('[Newsletter] Missing Turnstile secret');
+    return false;
+  }
+
+  const formData = new FormData();
+  formData.append('secret', env.TURNSTILE_SECRET_KEY);
+  formData.append('response', token);
+  const ip = request.headers.get('CF-Connecting-IP');
+  if (ip) formData.append('remoteip', ip);
+
+  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) return false;
+
+  const result = await response.json();
+  const allowedHostnames = (env.TURNSTILE_ALLOWED_HOSTNAMES || 'techwithdikshant.com,www.techwithdikshant.com')
+    .split(',')
+    .map((hostname) => hostname.trim())
+    .filter(Boolean);
+
+  return result.success === true &&
+    result.action === TURNSTILE_ACTION &&
+    allowedHostnames.includes(result.hostname);
 }
 
 function errorResponse(status, message, request) {
@@ -52,14 +99,54 @@ async function handleRequest(context) {
   const { request, env } = context;
 
   try {
-    const { email } = await request.json();
+    if (!isAllowedOrigin(request)) {
+      return errorResponse(403, 'Request origin is not allowed', request);
+    }
+
+    const contentLength = Number(request.headers.get('Content-Length') || 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return errorResponse(413, 'Request body is too large', request);
+    }
+
+    const rawBody = await request.text();
+    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
+      return errorResponse(413, 'Request body is too large', request);
+    }
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return errorResponse(400, 'Invalid JSON in request body', request);
+    }
+
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const turnstileToken = typeof body.turnstileToken === 'string' ? body.turnstileToken : '';
 
     if (!email) {
       return errorResponse(400, 'Email is required', request);
     }
 
-    if (!isValidEmail(email)) {
+    if (email.length > MAX_EMAIL_LENGTH || !isValidEmail(email)) {
       return errorResponse(400, 'Invalid email format', request);
+    }
+
+    if (!turnstileToken || turnstileToken.length > MAX_TURNSTILE_TOKEN_LENGTH) {
+      return errorResponse(400, 'Security verification is required', request);
+    }
+
+    if (!env.NEWSLETTER_RATE_LIMITER?.limit) {
+      console.error('[Newsletter] Missing rate limiter binding');
+      return errorResponse(500, 'Server configuration error', request);
+    }
+
+    const rateLimit = await env.NEWSLETTER_RATE_LIMITER.limit({ key: getClientKey(request) });
+    if (!rateLimit.success) {
+      return errorResponse(429, 'Too many requests. Please try again later.', request);
+    }
+
+    if (!await verifyTurnstile(turnstileToken, env, request)) {
+      return errorResponse(400, 'Security verification failed. Please try again.', request);
     }
 
     if (!env.BEEHIIV_API_KEY || !env.BEEHIIV_PUBLICATION_ID) {
@@ -76,7 +163,7 @@ async function handleRequest(context) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          email: email,
+          email,
           reactivate_existing: false,
           send_welcome_email: true,
           utm_source: 'website',
@@ -87,11 +174,11 @@ async function handleRequest(context) {
     );
 
     if (beehiivResponse.status === 201) {
-      return successResponse('Successfully subscribed to newsletter! Check your email to confirm.', request);
+      return successResponse('Successfully subscribed to the newsletter. Check your email to confirm.', request);
     }
 
     if (beehiivResponse.status === 409) {
-      return successResponse('You are already subscribed to our newsletter!', request);
+      return successResponse('You are already subscribed to the newsletter.', request);
     }
 
     if (beehiivResponse.status === 401) {

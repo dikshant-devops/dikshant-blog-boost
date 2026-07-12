@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Connect from './Connect';
 
+const turnstileMocks = vi.hoisted(() => ({
+  prepare: vi.fn(),
+  removeWidget: vi.fn(),
+  verify: vi.fn().mockResolvedValue('verified-token'),
+}));
+
+vi.mock('@/hooks/useTurnstile', () => ({
+  useTurnstile: () => ({ containerRef: { current: null }, ...turnstileMocks }),
+}));
+
 // Mock useToast
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
@@ -12,9 +22,7 @@ describe('Connect Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('fetch', vi.fn());
-    // Mock import.meta.env for Turnstile
-    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '');
-    window.turnstile = undefined;
+    turnstileMocks.verify.mockResolvedValue('verified-token');
   });
 
   it('renders page heading', () => {
@@ -70,7 +78,8 @@ describe('Connect Page', () => {
       }));
     });
 
-    it('shows verification required when Turnstile token is missing', async () => {
+    it('does not call the endpoint when security verification fails', async () => {
+      turnstileMocks.verify.mockRejectedValueOnce(new Error('Security verification failed.'));
       render(<Connect />);
 
       // Fill all fields
@@ -80,23 +89,14 @@ describe('Connect Page', () => {
       fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello', name: 'message' } });
 
       fireEvent.submit(screen.getByText('Send message').closest('form')!);
-
-      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Verification required',
-        variant: 'destructive',
-      }));
+      await waitFor(() => expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
+        description: 'Security verification failed.',
+      })));
+      expect(fetch).not.toHaveBeenCalled();
     });
   });
 
   it('preserves the contact API endpoint and Turnstile payload', async () => {
-    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'test-site-key');
-    window.turnstile = {
-      reset: vi.fn(),
-      render: vi.fn((_element, options) => {
-        options.callback('verified-token');
-        return 'widget-id';
-      }),
-    };
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ success: true }),
@@ -108,7 +108,6 @@ describe('Connect Page', () => {
     fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Architecture', name: 'subject' } });
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Please review this system.', name: 'message' } });
 
-    await waitFor(() => expect(window.turnstile?.render).toHaveBeenCalled());
     fireEvent.submit(screen.getByText('Send message').closest('form')!);
 
     await waitFor(() => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Header } from './Header';
 
@@ -34,6 +34,8 @@ describe('Header', () => {
     renderHeader();
     const menuButton = screen.getByLabelText('Open menu');
     expect(menuButton).toBeInTheDocument();
+    fireEvent.click(menuButton);
+    expect(screen.getByText('Primary site navigation')).toBeInTheDocument();
   });
 
   it('renders theme toggle button', () => {

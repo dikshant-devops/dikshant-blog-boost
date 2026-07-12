@@ -18,6 +18,10 @@ describe('Cloudflare Pages configuration', () => {
     expect(content).toContain('Referrer-Policy');
     expect(content).toContain('Strict-Transport-Security');
     expect(content).toContain('Content-Security-Policy');
+    expect(content).toContain("script-src 'self' https://challenges.cloudflare.com");
+    const scriptDirective = content.match(/script-src\s+([^;]+)/)?.[1] || '';
+    expect(scriptDirective).not.toContain("'unsafe-inline'");
+    expect(content).not.toContain('X-XSS-Protection');
   });
 
   it('_headers includes cache headers for assets', () => {

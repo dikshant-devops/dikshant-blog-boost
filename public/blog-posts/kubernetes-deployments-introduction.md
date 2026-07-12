@@ -10,10 +10,9 @@ playlist: "Kubernetes Foundations"
 playlistOrder: 2
 playlistOnly: true
 difficulty: "Beginner"
-image: "/og-default.jpg"
+image: "/images/social/containers.png"
 tags: ["Kubernetes", "Containers", "Orchestration"]
 tools: ["Kubernetes", "kubectl"]
-readTime: "9 min read"
 ---
 
 A container image is not a deployment plan. Kubernetes still needs to know how many copies to run, how to identify them, when a new copy is ready for traffic, and how to replace an old version. A `Deployment` captures that desired state for a stateless application and continuously reconciles the cluster toward it.
@@ -247,4 +246,3 @@ Deleting a failing Pod only asks the ReplicaSet to recreate the same specificati
 
 - [Kubernetes Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 - [Run a stateless application using a Deployment](https://kubernetes.io/docs/tasks/run-application/run-stateless-application-deployment/)
-

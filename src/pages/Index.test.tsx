@@ -37,6 +37,11 @@ describe('Index Page', () => {
     renderIndex();
     expect(screen.getByRole('heading', { name: 'Tech With Dikshant' })).toBeInTheDocument();
     expect(screen.getByText(/Production-minded DevOps notes/)).toBeInTheDocument();
+    const hero = screen.getByRole('img', { name: /cloud infrastructure operations workspace/i });
+    expect(hero).toHaveAttribute('width', '1920');
+    expect(hero).toHaveAttribute('height', '1053');
+    expect(hero).toHaveAttribute('fetchpriority', 'high');
+    expect(hero.getAttribute('srcset')).toContain('devops-operations-hero-960.jpg 960w');
   });
 
   it('renders primary reading and author CTAs', () => {

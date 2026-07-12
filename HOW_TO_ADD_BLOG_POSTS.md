@@ -37,7 +37,6 @@ Create a file like `my-awesome-post.md`:
 title: "Configure Cloud Armor for Production Workloads"
 excerpt: "A tested Cloud Armor security guide with policy configuration, verification commands, observed results, and rollback steps."
 date: "2024-01-20"
-readTime: "8 min read"
 author: "Dikshant Rai"
 category: "Security"
 platform: "GCP"
@@ -69,7 +68,6 @@ First, install Docker...
 | `date` | String | `"2024-01-20"` | Required publication date (YYYY-MM-DD) |
 | `updatedDate` | String | `"2024-01-22"` | Last verified update; cannot predate `date` |
 | `author` | String | `"Dikshant Rai"` | Author displayed in metadata and schema |
-| `readTime` | String | `"5 min read"` | Optional override; otherwise calculated at 200 words/minute |
 | `tags` | Array | `["GCP", "Security"]` | 1-8 unique public navigation tags |
 | `category` | String | `"Security"` | Broad engineering concern: Cloud, CI/CD, Containers, Networking, Security, Developer Tools, Observability, DevOps |
 | `platform` | String | `"GCP"` | Provider/platform for filtering: GCP, AWS, Azure, Kubernetes, Docker |
@@ -87,7 +85,6 @@ First, install Docker...
 title: "Use Quoted Production Titles with Clear Intent"
 excerpt: "Describe the tested problem, implementation approach, observed result, and intended reader in 90 to 180 characters."
 date: "2024-01-20"
-readTime: "5 min read"
 tags: ["Tag1", "Tag2", "Tag3"]
 category: "CI/CD"
 platform: ""
@@ -296,7 +293,6 @@ Special characters and spaces are automatically converted to hyphens.
 title: "Kubernetes Deployment Tutorial for Beginners"
 excerpt: "Deploy a first Kubernetes application with tested manifests, verification commands, observed pod state, and practical rollback guidance."
 date: "2024-01-20"
-readTime: "10 min read"
 tags: ["Kubernetes", "DevOps", "Containers"]
 category: "Containers"
 platform: "Kubernetes"
@@ -386,9 +382,9 @@ Congratulations! You've deployed your first Kubernetes application. In the next 
 - Link to primary documentation for version-sensitive facts
 
 ### 3. **Read Time Estimation**
-- Automatically calculated at 200 words/minute
-- Can be overridden in frontmatter
-- Format: `"X min read"` (e.g., "5 min read", "12 min read")
+- Automatically calculated from prose at 200 words per minute
+- Non-empty code and configuration lines are estimated separately at 40 lines per minute
+- Generated values stay aligned when an article is edited
 
 ### 4. **Date Sorting**
 - Posts are automatically sorted by date (newest first)
@@ -449,7 +445,6 @@ The frontmatter social image is stricter: use JPEG, PNG, or WebP. SVG and GIF ar
 title: "A Specific Tested DevOps Tutorial Title"
 excerpt: "A specific 90-180 character description of the tested problem, implementation, result, and intended reader."
 date: "2024-01-20"
-readTime: "5 min read"
 tags: ["Tag1", "Tag2"]
 category: "DevOps"
 difficulty: "Intermediate"

@@ -14,6 +14,7 @@ import { access, mkdir, readdir, readFile, rm, writeFile } from 'fs/promises';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { SITE_URL, parseBlogMarkdown, validateBlogPosts } from './lib/content.js';
+import { buildSearchIndex } from './lib/search.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,7 +29,7 @@ const SITEMAP_FILE = join(__dirname, '../public/sitemap.xml');
 const RSS_FILE = join(__dirname, '../public/rss.xml');
 const ROBOTS_FILE = join(__dirname, '../public/robots.txt');
 
-const STATIC_ROUTES = ['/', '/blog', '/about', '/newsletter', '/connect'];
+const STATIC_ROUTES = ['/', '/blog', '/about', '/newsletter', '/connect', '/privacy', '/terms'];
 
 function xmlEscape(value) {
   return String(value)
@@ -155,7 +156,7 @@ async function generateManifest() {
     // Write manifest file
     await writeFile(MANIFEST_FILE, JSON.stringify(markdownFiles, null, 2));
     const listingPosts = posts.map(({ searchText: _searchText, headings: _headings, ...post }) => post);
-    const searchIndex = posts.map(({ id, searchText }) => ({ id, searchText }));
+    const searchIndex = buildSearchIndex(posts);
 
     await rm(DETAILS_DIR, { recursive: true, force: true });
     await mkdir(DETAILS_DIR, { recursive: true });

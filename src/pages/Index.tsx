@@ -55,9 +55,9 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
 
   useSEO({
-    title: "Tech With Dikshant - DevOps Tutorials & Insights",
-    description: "Master DevOps with practical tutorials on Docker, Kubernetes, CI/CD, and cloud technologies. Learn from real-world examples and best practices.",
-    keywords: "DevOps, Docker, Kubernetes, CI/CD, GitHub Actions, Cloud, Automation, Tutorials",
+    title: "Tech With Dikshant | Practical DevOps Field Notes",
+    description: "Practical DevOps field notes on cloud infrastructure, CI/CD, networking, containers, and reliability, with tested commands and operational context.",
+    keywords: "DevOps field notes, cloud infrastructure, CI/CD, networking, containers, site reliability engineering",
     type: "website",
     url: window.location.origin
   });
@@ -88,7 +88,14 @@ const Index = () => {
       <section className="relative isolate flex h-[min(580px,calc(100svh-6rem))] min-h-[500px] items-center overflow-hidden bg-black text-white">
         <img
           src="/images/site/devops-operations-hero.jpg"
+          srcSet="/images/site/devops-operations-hero-960.jpg 960w, /images/site/devops-operations-hero-1440.jpg 1440w, /images/site/devops-operations-hero.jpg 1920w"
+          sizes="100vw"
           alt="Cloud infrastructure operations workspace with deployment and monitoring screens"
+          width="1920"
+          height="1053"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
           className="absolute inset-0 -z-20 h-full w-full object-cover object-[68%_center] md:object-center"
         />
         <div className="absolute inset-0 -z-10 bg-black/60" />

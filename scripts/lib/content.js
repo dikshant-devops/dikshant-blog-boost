@@ -106,10 +106,14 @@ export function extractExcerpt(content, maxLength = 180) {
 }
 
 export function estimateReadTime(content) {
-  const words = stripMarkdown(content).split(/\s+/).filter(Boolean).length;
+  const proseWords = stripMarkdown(content).split(/\s+/).filter(Boolean);
+  const codeLines = [...content.matchAll(/```[^\n]*\n([\s\S]*?)```/g)]
+    .flatMap(match => match[1].split('\n'))
+    .filter(line => line.trim()).length;
+  const estimatedMinutes = proseWords.length / 200 + codeLines / 40;
   return {
-    wordCount: words,
-    readTime: `${Math.max(1, Math.ceil(words / 200))} min read`
+    wordCount: proseWords.length,
+    readTime: `${Math.max(1, Math.ceil(estimatedMinutes))} min read`
   };
 }
 
@@ -265,6 +269,9 @@ export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
   const parsed = matter(rawContent);
   const content = parsed.content.trim();
   const data = parsed.data || {};
+  if (data.readTime !== undefined) {
+    throw new Error(`${filename}: readTime is generated automatically and must not be set in frontmatter`);
+  }
   const title = String(data.title || extractTitle(content, filename)).trim();
   const id = slugify(data.slug || path.basename(filename, '.md'));
   if (!id) throw new Error(`${filename}: slug resolves to an empty value`);
@@ -348,7 +355,7 @@ export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
     excerpt: excerpt.trim(),
     date,
     updatedDate,
-    readTime: String(data.readTime || readStats.readTime),
+    readTime: readStats.readTime,
     wordCount: readStats.wordCount,
     author,
     tags: detectedTags,

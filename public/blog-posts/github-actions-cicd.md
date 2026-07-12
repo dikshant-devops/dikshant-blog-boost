@@ -2,18 +2,17 @@
 title: "CI/CD with GitHub Actions: Automate Your Development Workflow"
 excerpt: "Learn how to set up continuous integration and deployment pipelines using GitHub Actions for faster, more reliable software delivery."
 date: "2024-12-20"
-updatedDate: "2024-12-20"
+updatedDate: "2026-07-12"
 author: "Dikshant Rai"
 category: "CI/CD"
 platform: ""
 difficulty: "Intermediate"
-image: "/og-default.jpg"
-readTime: "12 min read"
+image: "/images/social/cicd.png"
 tags: ["GitHub Actions", "CI/CD", "DevOps", "Automation"]
 tools: ["GitHub Actions", "Docker"]
 ---
 
-GitHub Actions has revolutionized how developers approach CI/CD by bringing automation directly into the GitHub ecosystem. In this comprehensive guide, we'll explore how to build robust CI/CD pipelines that automate testing, building, and deployment.
+GitHub Actions runs repository workflows in response to events such as pull requests, pushes, schedules, and manual dispatches. The important design work is controlling permissions, making jobs reproducible, and ensuring that an untrusted change cannot reach deployment credentials.
 
 ## What is GitHub Actions?
 
@@ -25,7 +24,7 @@ GitHub Actions is a CI/CD platform that allows you to automate your software dev
 - **Flexible**: Supports any programming language and framework
 - **Scalable**: Runs on GitHub-hosted or self-hosted runners
 - **Marketplace**: Thousands of pre-built actions available
-- **Free Tier**: 2,000 minutes/month for public repositories
+- **Usage model**: Included minutes and billing depend on repository visibility, runner type, operating system, and account plan
 
 ## Core Concepts
 
@@ -68,26 +67,29 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
-        node-version: '18'
+        node-version: '24'
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm ci
-      
+
     - name: Run tests
       run: npm test
-      
+
     - name: Run linting
       run: npm run lint
 ```
@@ -100,16 +102,16 @@ on:
   push:
     branches: [ main, develop ]
     tags: [ 'v*' ]
-    
+
   # Trigger on pull requests
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened]
-    
+
   # Trigger on schedule (cron format)
   schedule:
     - cron: '0 2 * * 1'  # Every Monday at 2 AM
-    
+
   # Manual trigger
   workflow_dispatch:
     inputs:
@@ -137,95 +139,95 @@ on:
     branches: [ main ]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '24'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   # Code Quality & Testing
   quality:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm ci
-      
+
     - name: Lint code
       run: npm run lint
-      
+
     - name: Type check
       run: npm run type-check
-      
+
     - name: Run unit tests
       run: npm run test:unit
-      
+
     - name: Run integration tests
       run: npm run test:integration
-      
+
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v6
       with:
-        file: ./coverage/lcov.info
-        
+        files: ./coverage/lcov.info
+
   # Security Scanning
   security:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Run security audit
       run: npm audit --audit-level high
-      
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/node@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   # Build Application
   build:
     needs: [quality, security]
     runs-on: ubuntu-latest
-    
+
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
-      
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm ci
-      
+
     - name: Build application
       run: npm run build
-      
+
     - name: Setup Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Login to Container Registry
+      if: github.event_name != 'pull_request'
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
@@ -236,13 +238,13 @@ jobs:
           type=ref,event=pr
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
-          
+
     - name: Build and push Docker image
       id: build
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
-        push: true
+        push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -254,20 +256,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
     environment: staging
-    
+
     steps:
     - name: Deploy to staging
       run: |
         echo "Deploying to staging environment"
         # Add your deployment commands here
-        
+
   # Deploy to Production
   deploy-production:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     environment: production
-    
+
     steps:
     - name: Deploy to production
       run: |
@@ -285,29 +287,25 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [16, 18, 20]
-        exclude:
-          # Exclude Node 16 on Windows
-          - os: windows-latest
-            node-version: 16
-            
+        node-version: [20, 22, 24]
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm ci
-      
+
     - name: Run tests
       run: npm test
 ```
@@ -322,10 +320,10 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
-        image: postgres:13
+        image: postgres:17-alpine
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: testdb
@@ -336,7 +334,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-          
+
       redis:
         image: redis:7
         options: >-
@@ -346,26 +344,26 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
-    
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
-        node-version: '18'
+        node-version: '24'
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm ci
-      
+
     - name: Run database migrations
       run: npm run db:migrate
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
         REDIS_URL: redis://localhost:6379
-        
+
     - name: Run API tests
       run: npm run test:api
       env:
@@ -393,10 +391,10 @@ jobs:
       docs: ${{ steps.changes.outputs.docs }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Check for changes
-      uses: dorny/paths-filter@v2
+      uses: dorny/paths-filter@v3
       id: changes
       with:
         filters: |
@@ -458,7 +456,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    
+
     steps:
     - name: Deploy to ${{ inputs.environment }}
       run: |
@@ -480,7 +478,7 @@ on:
 jobs:
   build:
     # ... build job
-    
+
   deploy-staging:
     needs: build
     uses: ./.github/workflows/reusable-deploy.yml
@@ -503,36 +501,23 @@ inputs:
   node-version:
     description: 'Node.js version'
     required: false
-    default: '18'
+    default: '24'
   cache-dependency-path:
     description: 'Path to dependency file'
     required: false
     default: 'package-lock.json'
 
-outputs:
-  cache-hit:
-    description: 'Whether dependencies were cached'
-    value: ${{ steps.cache.outputs.cache-hit }}
-
 runs:
   using: 'composite'
   steps:
   - name: Setup Node.js
-    uses: actions/setup-node@v4
+    uses: actions/setup-node@v6
     with:
       node-version: ${{ inputs.node-version }}
-      
-  - name: Cache dependencies
-    id: cache
-    uses: actions/cache@v3
-    with:
-      path: ~/.npm
-      key: ${{ runner.os }}-node-${{ hashFiles(inputs.cache-dependency-path) }}
-      restore-keys: |
-        ${{ runner.os }}-node-
-        
+      cache: npm
+      cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
   - name: Install dependencies
-    if: steps.cache.outputs.cache-hit != 'true'
     run: npm ci
     shell: bash
 ```
@@ -542,12 +527,12 @@ Use the custom action:
 ```yaml
 steps:
 - name: Checkout
-  uses: actions/checkout@v4
-  
+  uses: actions/checkout@v6
+
 - name: Setup App
   uses: ./.github/actions/setup-app
   with:
-    node-version: '18'
+    node-version: '24'
 ```
 
 ## Security Best Practices
@@ -560,11 +545,9 @@ env:
   API_KEY: ${{ secrets.API_KEY }}
   DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-# Environment-specific secrets
-environment: production
-secrets:
-  inherit: true  # Inherit organization secrets
 ```
+
+Repository and environment secrets are referenced through the `secrets` context. The `secrets: inherit` syntax applies to calls to reusable workflows; it is not a general way to load secrets into an ordinary job.
 
 ### 2. OIDC Authentication
 
@@ -575,7 +558,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      
+
     steps:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -586,33 +569,16 @@ jobs:
 
 ### 3. Dependency Updates
 
+Use Dependabot or another reviewed dependency service instead of running `npm audit fix` unattended. A minimal `.github/dependabot.yml` configuration is:
+
 ```yaml
-name: Update Dependencies
-
-on:
-  schedule:
-    - cron: '0 8 * * 1'  # Every Monday at 8 AM
-
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      
-    - name: Update dependencies
-      run: |
-        npm update
-        npm audit fix
-        
-    - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v5
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        title: 'chore: update dependencies'
-        body: 'Automated dependency updates'
-        branch: update-dependencies
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
 ```
 
 ## Monitoring and Optimization
@@ -628,27 +594,24 @@ jobs:
 
 ```yaml
 steps:
-- name: Cache Node modules
-  uses: actions/cache@v3
+- uses: actions/setup-node@v6
   with:
-    path: ~/.npm
-    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-    restore-keys: |
-      ${{ runner.os }}-node-
+    node-version: 24
+    cache: npm
+- run: npm ci
 
-- name: Cache Docker layers
-  uses: actions/cache@v3
+- uses: docker/build-push-action@v7
   with:
-    path: /tmp/.buildx-cache
-    key: ${{ runner.os }}-buildx-${{ github.sha }}
-    restore-keys: |
-      ${{ runner.os }}-buildx-
+    context: .
+    push: false
+    cache-from: type=gha
+    cache-to: type=gha,mode=max
 ```
 
 ### 3. Performance Tips
 
-- Use `actions/cache` for dependencies
-- Minimize checkout depth: `fetch-depth: 1`
+- Prefer a tool's supported cache integration, such as `setup-node` for npm and Buildx's `type=gha` backend
+- Keep the default shallow checkout unless a job genuinely needs history or tags
 - Use matrix strategies for parallel execution
 - Consider self-hosted runners for heavy workloads
 - Use `continue-on-error` for non-critical steps
@@ -665,42 +628,24 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      
-    - name: Generate changelog
-      id: changelog
-      run: |
-        # Generate changelog logic
-        
+      uses: actions/checkout@v6
+
     - name: Create Release
-      uses: actions/create-release@v1
+      run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: ${{ steps.changelog.outputs.changelog }}
-        draft: false
-        prerelease: false
+        GH_TOKEN: ${{ github.token }}
 ```
 
-### 2. Notification Integration
-
-```yaml
-- name: Slack Notification
-  uses: 8398a7/action-slack@v3
-  if: always()
-  with:
-    status: ${{ job.status }}
-    webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-    fields: repo,message,commit,author,action,eventName,ref,workflow
-```
+For chat notifications, use an integration owned by the destination platform or pin a reviewed third-party action to a full commit SHA. Give the notification job only the secret and permissions it requires.
 
 ## Troubleshooting
 
@@ -720,24 +665,25 @@ jobs:
     echo "Ref: ${{ github.ref }}"
     echo "SHA: ${{ github.sha }}"
     echo "Actor: ${{ github.actor }}"
-    env
+    echo "Run ID: ${{ github.run_id }}"
 ```
 
 ## Conclusion
 
-GitHub Actions provides a powerful platform for implementing CI/CD pipelines. Start with simple workflows and gradually add complexity as your needs grow.
+Start with one pull-request workflow that installs from a lockfile, runs deterministic checks, and has read-only repository permission. Add packaging and deployment only after artifacts, environments, approvals, and rollback behavior are defined.
 
 Key takeaways:
 - Start simple, iterate frequently
-- Use marketplace actions when possible
+- Prefer maintained actions and pin third-party actions to reviewed commit SHAs
 - Implement proper secret management
 - Monitor and optimize performance
 - Test your workflows thoroughly
 
-With GitHub Actions, you can automate your entire development lifecycle, from code commit to production deployment, ensuring faster, more reliable software delivery.
+With GitHub Actions, you can automate your development lifecycle from code review through deployment while keeping each control visible in the repository.
 
-For newsletter integration with Beehiiv, I recommend connecting to Supabase which will allow you to securely handle the API calls:
+## References
 
-<lov-actions>
-<lov-link url="https://docs.lovable.dev/integrations/supabase/" >Supabase integration docs</lov-link>
-</lov-actions>
+- [GitHub Actions workflow syntax](https://docs.github.com/actions/reference/workflows-and-actions/workflow-syntax)
+- [Assigning permissions to jobs](https://docs.github.com/actions/security-for-github-actions/security-guides/automatic-token-authentication)
+- [Using OpenID Connect](https://docs.github.com/actions/concepts/security/openid-connect)
+- [Dependency caching](https://docs.github.com/actions/using-workflows/caching-dependencies-to-speed-up-workflows)

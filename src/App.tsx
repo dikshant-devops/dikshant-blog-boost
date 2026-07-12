@@ -1,5 +1,4 @@
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -14,6 +13,8 @@ const Series = lazy(() => import("./pages/Series"));
 const Newsletter = lazy(() => import("./pages/Newsletter"));
 const About = lazy(() => import("./pages/About"));
 const Connect = lazy(() => import("./pages/Connect"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
 const Admin = import.meta.env.DEV ? lazy(() => import("./pages/Admin")) : null;
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -22,7 +23,6 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
         <Layout>
           <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="text-lg">Loading...</div></div>}>
             <Routes>
@@ -34,6 +34,8 @@ const App = () => (
               <Route path="/newsletter" element={<Newsletter />} />
               <Route path="/about" element={<About />} />
               <Route path="/connect" element={<Connect />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               {Admin && <Route path="/admin" element={<Admin />} />}
               <Route path="*" element={<NotFound />} />
             </Routes>

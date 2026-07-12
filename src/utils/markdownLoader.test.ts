@@ -31,7 +31,10 @@ describe('markdownLoader', () => {
       if (url.includes('blog-search-index')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve([{ id: 'test-blog-post', searchText: 'full article body' }]),
+          json: () => Promise.resolve({
+            version: 1,
+            documents: [{ id: 'test-blog-post', terms: 'full article body', boost: 'test blog' }],
+          }),
         });
       }
       // Manifest request
@@ -158,7 +161,10 @@ describe('markdownLoader', () => {
       const first = await loadBlogSearchIndex();
       const second = await loadBlogSearchIndex();
 
-      expect(first).toEqual({ 'test-blog-post': 'full article body' });
+      expect(first).toEqual({
+        version: 1,
+        documents: [{ id: 'test-blog-post', terms: 'full article body', boost: 'test blog' }],
+      });
       expect(second).toBe(first);
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });

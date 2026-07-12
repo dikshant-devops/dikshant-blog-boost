@@ -2,6 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NewsletterSignup } from './NewsletterSignup';
 
+const turnstileMocks = vi.hoisted(() => ({
+  prepare: vi.fn(),
+  removeWidget: vi.fn(),
+  verify: vi.fn().mockResolvedValue('verified-token'),
+}));
+
+vi.mock('@/hooks/useTurnstile', () => ({
+  useTurnstile: () => ({
+    containerRef: { current: null },
+    ...turnstileMocks,
+  }),
+}));
+
 // Mock useToast
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
@@ -11,6 +24,7 @@ vi.mock('@/hooks/use-toast', () => ({
 describe('NewsletterSignup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    turnstileMocks.verify.mockResolvedValue('verified-token');
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -22,7 +36,7 @@ describe('NewsletterSignup', () => {
 
     it('renders email input and subscribe button', () => {
       render(<NewsletterSignup />);
-      expect(screen.getByPlaceholderText('Enter your email address')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Email address' })).toBeInTheDocument();
       expect(screen.getByText('Subscribe to Newsletter')).toBeInTheDocument();
     });
 
@@ -40,7 +54,7 @@ describe('NewsletterSignup', () => {
 
     it('renders inline email input', () => {
       render(<NewsletterSignup variant="inline" />);
-      expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Email address' })).toBeInTheDocument();
       expect(screen.getByText('Subscribe')).toBeInTheDocument();
     });
   });
@@ -70,7 +84,7 @@ describe('NewsletterSignup', () => {
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith('/newsletter-subscribe', expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ email: 'user@test.com' }),
+          body: JSON.stringify({ email: 'user@test.com', turnstileToken: 'verified-token' }),
         }));
       });
     });
@@ -91,6 +105,7 @@ describe('NewsletterSignup', () => {
           title: expect.stringContaining('Welcome'),
         }));
       });
+      expect(screen.getByRole('status')).toHaveTextContent('Subscription request accepted');
     });
 
     it('clears email after successful subscription', async () => {
@@ -112,8 +127,8 @@ describe('NewsletterSignup', () => {
     it('shows error toast on API failure', async () => {
       (fetch as any).mockResolvedValue({
         ok: false,
-        status: 500,
-        text: () => Promise.resolve('Server Error'),
+        status: 429,
+        json: () => Promise.resolve({ success: false, error: 'Too many requests. Please try again later.' }),
       });
 
       render(<NewsletterSignup />);
@@ -123,12 +138,14 @@ describe('NewsletterSignup', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
+          description: 'Too many requests. Please try again later.',
           variant: 'destructive',
         }));
       });
+      expect(screen.getByRole('status')).toHaveTextContent('Too many requests');
     });
 
-    it('shows network error toast on fetch rejection', async () => {
+    it('shows a controlled error toast on fetch rejection', async () => {
       (fetch as any).mockRejectedValue(new Error('Network error'));
 
       render(<NewsletterSignup />);
@@ -138,9 +155,22 @@ describe('NewsletterSignup', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
-          title: 'Network error',
+          title: 'Subscription failed',
         }));
       });
+    });
+
+    it('does not call the endpoint when security verification fails', async () => {
+      turnstileMocks.verify.mockRejectedValueOnce(new Error('Security verification failed.'));
+      render(<NewsletterSignup />);
+      const input = screen.getByPlaceholderText('Enter your email address');
+      fireEvent.change(input, { target: { value: 'user@test.com' } });
+      fireEvent.submit(input.closest('form')!);
+
+      await waitFor(() => expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
+        description: 'Security verification failed.',
+      })));
+      expect(fetch).not.toHaveBeenCalled();
     });
 
     it('shows loading state during submission', async () => {

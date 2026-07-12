@@ -4,25 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Linkedin, Twitter, Github, Mail, MessageCircle, ExternalLink, Send } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSEO } from "@/hooks/useSEO";
-
-// Extend window interface for Turnstile
-declare global {
-  interface Window {
-    turnstile?: {
-      reset: (widgetId?: string) => void;
-      render: (element: string | HTMLElement, options: {
-        sitekey: string;
-        callback: (token: string) => void;
-        "error-callback"?: () => void;
-        theme?: "auto" | "light" | "dark";
-      }) => string;
-    };
-    onTurnstileSuccess?: (token: string) => void;
-  }
-}
+import { useTurnstile } from "@/hooks/useTurnstile";
 
 export default function Connect() {
   useSEO({
@@ -40,60 +25,8 @@ export default function Connect() {
     message: ""
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const [widgetId, setWidgetId] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Setup Turnstile with explicit rendering
-  useEffect(() => {
-    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
-
-    if (!siteKey) return;
-    let active = true;
-
-    const renderWidget = () => {
-      if (!active) return;
-      const container = document.getElementById('turnstile-widget');
-      if (!container || !window.turnstile || container.childElementCount > 0) return;
-
-      try {
-        const id = window.turnstile.render('#turnstile-widget', {
-          sitekey: siteKey,
-          callback: (token: string) => {
-            setTurnstileToken(token);
-          },
-          'error-callback': () => {},
-          theme: 'auto',
-        });
-        setWidgetId(id);
-      } catch (error) {
-        console.error('[Turnstile] Failed to render widget:', error);
-      }
-    };
-
-    if (window.turnstile) {
-      renderWidget();
-      return () => {
-        active = false;
-      };
-    }
-
-    let script = document.querySelector<HTMLScriptElement>('script[data-turnstile-script="true"]');
-    if (!script) {
-      script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true;
-      script.defer = true;
-      script.setAttribute('data-turnstile-script', 'true');
-      document.head.appendChild(script);
-    }
-    script.addEventListener('load', renderWidget);
-
-    return () => {
-      active = false;
-      script?.removeEventListener('load', renderWidget);
-    };
-  }, []);
+  const { containerRef, prepare, removeWidget, verify } = useTurnstile("contact_submit");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,19 +41,10 @@ export default function Connect() {
       return;
     }
 
-    // Validate Turnstile token
-    if (!turnstileToken) {
-      toast({
-        title: "Verification required",
-        description: "Please complete the security check.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
+      const turnstileToken = await verify();
       // Send form data to API
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -162,12 +86,7 @@ export default function Connect() {
 
         // Reset form
         setFormData({ name: "", email: "", subject: "", message: "" });
-        setTurnstileToken("");
-
-        // Reset Turnstile widget
-        if (window.turnstile && widgetId) {
-          window.turnstile.reset(widgetId);
-        }
+        removeWidget();
       }
     } catch (error) {
       console.error('Contact form error:', error);
@@ -245,7 +164,7 @@ export default function Connect() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} onFocus={prepare} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Name</Label>
@@ -297,24 +216,9 @@ export default function Connect() {
                     />
                   </div>
 
-                  {/* Debug: Show if environment variable is loaded */}
-                  {import.meta.env.DEV && !import.meta.env.VITE_TURNSTILE_SITE_KEY && (
-                    <div className="text-sm text-red-500 text-center">
-                      Turnstile site key is not configured. Check your .env file.
-                    </div>
-                  )}
-
-                  {/* Cloudflare Turnstile Widget */}
                   <div className="flex justify-center">
-                    <div id="turnstile-widget"></div>
+                    <div ref={containerRef} aria-live="polite" />
                   </div>
-
-                  {/* Debug: Show if token is received */}
-                  {import.meta.env.DEV && turnstileToken && (
-                    <div className="text-xs text-green-500 text-center">
-                      Security check passed
-                    </div>
-                  )}
 
                   <Button
                     type="submit"
@@ -324,6 +228,9 @@ export default function Connect() {
                     <Send className="mr-2 h-4 w-4" />
                     {isLoading ? "Sending..." : "Send message"}
                   </Button>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Protected by Cloudflare Turnstile. Messages and request details are stored in SheetDB for review and response. <a href="/privacy" className="underline underline-offset-4">Privacy details</a>.
+                  </p>
                 </form>
               </CardContent>
             </Card>

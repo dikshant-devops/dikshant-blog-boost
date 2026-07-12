@@ -2,18 +2,17 @@
 title: "Getting Started with Docker: A Beginner's Guide"
 excerpt: "Learn the fundamentals of Docker containerization and how to get started with your first container."
 date: "2024-12-15"
-updatedDate: "2024-12-15"
+updatedDate: "2026-07-12"
 author: "Dikshant Rai"
 category: "Containers"
 platform: "Docker"
 difficulty: "Beginner"
-image: "/og-default.jpg"
-readTime: "8 min read"
+image: "/images/social/containers.png"
 tags: ["Docker", "DevOps", "Containers"]
 tools: ["Docker"]
 ---
 
-Docker has revolutionized the way we develop, ship, and run applications. In this comprehensive guide, we'll explore what Docker is, why it's important, and how you can get started with containerization.
+Docker packages an application process, its runtime, and its filesystem dependencies into an image. This guide builds a small image, runs it as a container, and separates local convenience from production controls.
 
 ## What is Docker?
 
@@ -35,26 +34,16 @@ Docker is a containerization platform that allows you to package applications an
 
 ## Installing Docker
 
-### On Windows/Mac
-1. Download Docker Desktop from [docker.com](https://docker.com)
-2. Run the installer and follow the setup wizard
-3. Verify installation: `docker --version`
+Install Docker Desktop on macOS or Windows, or Docker Engine and the Compose plugin on Linux. Use Docker's [installation documentation](https://docs.docker.com/engine/install/) for the operating system instead of copying repository commands that may have changed.
 
-### On Linux (Ubuntu)
+Verify both the engine client and the Compose plugin:
+
 ```bash
-# Update package index
-sudo apt update
-
-# Install Docker
-sudo apt install docker.io
-
-# Start Docker service
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Add user to docker group (optional)
-sudo usermod -aG docker $USER
+docker version
+docker compose version
 ```
+
+On Linux, membership in the `docker` group effectively grants root-level control of the host. Add users only when that trust level is appropriate, or use a supported rootless setup.
 
 ## Your First Docker Container
 
@@ -62,7 +51,7 @@ Let's start with a simple example - running a basic web server:
 
 ```bash
 # Pull and run an nginx container
-docker run -d -p 8080:80 --name my-web-server nginx
+docker run -d -p 127.0.0.1:8080:80 --name my-web-server nginx:stable-alpine
 
 # Check running containers
 docker ps
@@ -94,8 +83,8 @@ docker rm my-web-server
 A Dockerfile is a text file that contains instructions for building a Docker image:
 
 ```dockerfile
-# Use official Node.js runtime as base image
-FROM node:18-alpine
+# Use a supported Node.js release. Pin the patch version or digest in production.
+FROM node:24-alpine
 
 # Set working directory
 WORKDIR /app
@@ -104,13 +93,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci --omit=dev
 
 # Copy application code
-COPY . .
+COPY --chown=node:node . .
 
 # Expose port
 EXPOSE 3000
+
+# Drop root privileges before starting the application
+USER node
 
 # Start the application
 CMD ["npm", "start"]
@@ -131,36 +123,37 @@ docker run -p 3000:3000 my-node-app
 For applications with multiple services, use Docker Compose:
 
 ```yaml
-version: '3.8'
 services:
   web:
     build: .
     ports:
       - "3000:3000"
     depends_on:
-      - db
+      redis:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/myapp
+      REDIS_URL: redis://redis:6379
 
-  db:
-    image: postgres:13
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=myapp
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - redis_data:/data
 
 volumes:
-  postgres_data:
+  redis_data:
 ```
 
-Run with: `docker-compose up -d`
+Start the project with `docker compose up -d`, inspect it with `docker compose ps`, and remove its containers and network with `docker compose down`. The top-level `version` field is obsolete in the current Compose Specification and should be omitted.
 
 ## Best Practices
 
 ### 1. Keep Images Small
-- Use Alpine Linux base images when possible
+- Choose a minimal, maintained base image that is compatible with the application; Alpine uses musl libc and is not automatically the best option for every runtime
 - Remove unnecessary packages and files
 - Use multi-stage builds for production images
 
@@ -192,7 +185,7 @@ docker rm <container>         # Remove container
 
 # Debugging
 docker logs <container>       # View logs
-docker exec -it <container> bash  # Access container shell
+docker exec -it <container> sh    # Use a shell that exists in the image
 docker inspect <container>    # View container details
 ```
 
@@ -200,16 +193,21 @@ docker inspect <container>    # View container details
 
 Now that you understand Docker basics, consider exploring:
 
-1. **Docker Swarm**: Docker's native orchestration tool
-2. **Kubernetes**: Advanced container orchestration
-3. **CI/CD Integration**: Automate builds and deployments
-4. **Docker Security**: Advanced security practices
-5. **Monitoring**: Container monitoring and logging
+1. **Image supply chain**: Pin base images, generate provenance, and scan the resulting image
+2. **Compose overrides**: Separate local and production-specific configuration
+3. **CI/CD integration**: Build once, test the image, and promote the same digest
+4. **Runtime security**: Drop capabilities, use read-only filesystems where possible, and avoid privileged containers
+5. **Orchestration**: Evaluate Kubernetes or another scheduler only when multi-host requirements justify it
 
 ## Conclusion
 
-Docker simplifies application deployment and ensures consistency across environments. Start with simple containers, practice with Docker Compose, and gradually explore more advanced features.
+Docker makes an application filesystem and runtime configuration repeatable across environments. That consistency still depends on immutable inputs, explicit configuration, and testing the built image rather than rebuilding it separately in each environment.
 
-Remember: containerization is a journey, not a destination. Start small, learn continuously, and gradually adopt more advanced practices as your needs grow.
+Before publishing an image, verify the configured user, exposed ports, health behavior, image size, and vulnerability findings. A container makes dependencies repeatable; it does not make the application secure or highly available by itself.
 
-Happy containerizing! 🐳
+## References
+
+- [Docker Engine installation](https://docs.docker.com/engine/install/)
+- [Dockerfile best practices](https://docs.docker.com/build/building/best-practices/)
+- [Compose Specification](https://docs.docker.com/reference/compose-file/)
+- [Docker security](https://docs.docker.com/engine/security/)

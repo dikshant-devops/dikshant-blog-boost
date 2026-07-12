@@ -10,10 +10,9 @@ playlist: "GCP Security Essentials"
 playlistOrder: 1
 playlistOnly: true
 difficulty: "Beginner"
-image: "/og-default.jpg"
+image: "/images/social/security.png"
 tags: ["GCP", "Cloud", "Security"]
 tools: ["Google Cloud IAM", "gcloud"]
-readTime: "8 min read"
 ---
 
 Identity and Access Management becomes easier to reason about when every access decision is reduced to one question: **which principal can use which role on which resource?** Google Cloud IAM answers that question with policies attached to the resource hierarchy. The difficult part is rarely creating a role binding. It is understanding the effective access produced by bindings at the organization, folder, project, and resource levels.
@@ -156,4 +155,3 @@ The console is useful for inspection, but repeatable production access should be
 - [Google Cloud IAM overview](https://docs.cloud.google.com/iam/docs/overview)
 - [Understanding allow policies](https://docs.cloud.google.com/iam/docs/allow-policies)
 - [Best practices for using service accounts securely](https://docs.cloud.google.com/iam/docs/best-practices-service-accounts)
-
