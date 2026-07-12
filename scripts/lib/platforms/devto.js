@@ -29,7 +29,7 @@ export async function postToDevTo(articleData, apiKey, siteUrl) {
       tags: tags,
       canonical_url: canonicalUrl,
       description: frontmatter.excerpt || '',
-      series: frontmatter.series || undefined
+      series: frontmatter.playlist || frontmatter.series || undefined
     }
   };
 

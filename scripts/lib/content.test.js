@@ -20,21 +20,45 @@ ${body}
 `;
 
 describe('parseBlogMarkdown', () => {
-  it('keeps a post standalone when series is omitted', () => {
+  it('keeps a post standalone when playlist is omitted', () => {
     const post = parseBlogMarkdown('standalone-gcp-note.md', frontmatter());
 
-    expect(post.series).toBe('');
-    expect(post.seriesOrder).toBeUndefined();
+    expect(post.playlist).toBe('');
+    expect(post.playlistOrder).toBeUndefined();
   });
 
-  it('accepts an explicit series and positive position', () => {
+  it('accepts an explicit playlist and positive position', () => {
     const post = parseBlogMarkdown(
       'gcp-day-two.md',
+      frontmatter('playlist: "GCP Day by Day"\nplaylistOrder: 2\n')
+    );
+
+    expect(post.playlist).toBe('GCP Day by Day');
+    expect(post.playlistSlug).toBe('gcp-day-by-day');
+    expect(post.playlistOrder).toBe(2);
+  });
+
+  it('accepts playlist-only discovery only for playlist members', () => {
+    const post = parseBlogMarkdown(
+      'playlist-only-gcp.md',
+      frontmatter('playlist: "GCP Day by Day"\nplaylistOrder: 3\nplaylistOnly: true\n')
+    );
+
+    expect(post.playlistOnly).toBe(true);
+    expect(() => parseBlogMarkdown(
+      'invalid-playlist-only.md',
+      frontmatter('playlistOnly: true\n')
+    )).toThrow(/requires playlist membership/);
+  });
+
+  it('normalizes legacy series metadata into playlist fields', () => {
+    const post = parseBlogMarkdown(
+      'legacy-gcp-day-two.md',
       frontmatter('series: "GCP Day by Day"\nseriesOrder: 2\n')
     );
 
-    expect(post.series).toBe('GCP Day by Day');
-    expect(post.seriesOrder).toBe(2);
+    expect(post.playlist).toBe('GCP Day by Day');
+    expect(post.playlistOrder).toBe(2);
   });
 
   it('classifies Cloud Armor as security when category is inferred', () => {
@@ -59,18 +83,33 @@ describe('parseBlogMarkdown', () => {
     )).toThrow(/valid calendar date/);
   });
 
-  it('rejects seriesOrder when no series is supplied', () => {
+  it('rejects playlistOrder when no playlist is supplied', () => {
     expect(() => parseBlogMarkdown(
       'invalid-order.md',
-      frontmatter('seriesOrder: 1\n')
-    )).toThrow(/requires a non-empty series/);
+      frontmatter('playlistOrder: 1\n')
+    )).toThrow(/requires a non-empty playlist/);
   });
 
-  it('requires an explicit position when a series is supplied', () => {
+  it('requires an explicit position when a playlist is supplied', () => {
     expect(() => parseBlogMarkdown(
-      'missing-series-order.md',
-      frontmatter('series: "Production GCP Security"\n')
-    )).toThrow(/seriesOrder is required/);
+      'missing-playlist-order.md',
+      frontmatter('playlist: "Production GCP Security"\n')
+    )).toThrow(/playlistOrder is required/);
+  });
+
+  it('requires a supported platform and matching platform tag for playlists', () => {
+    expect(() => parseBlogMarkdown(
+      'azure-playlist.md',
+      frontmatter('playlist: "Azure Operations"\nplaylistOrder: 1\n')
+        .replace('platform: "GCP"', 'platform: "Azure"')
+        .replace('tags: ["GCP", "Security"]', 'tags: ["Azure", "Security"]')
+    )).toThrow(/only for GCP, AWS, or Kubernetes/);
+
+    expect(() => parseBlogMarkdown(
+      'missing-platform-tag.md',
+      frontmatter('playlist: "GCP Operations"\nplaylistOrder: 1\n')
+        .replace('tags: ["GCP", "Security"]', 'tags: ["Security"]')
+    )).toThrow(/must include the platform tag/);
   });
 
   it('rejects a second page title in the Markdown body', () => {
@@ -101,29 +140,44 @@ describe('validateBlogPosts', () => {
     expect(() => validateBlogPosts([first, second])).toThrow(/Duplicate blog slug/);
   });
 
-  it('rejects duplicate positions in the same series', () => {
+  it('rejects duplicate positions in the same playlist', () => {
     const first = parseBlogMarkdown(
-      'series-one.md',
-      frontmatter('series: "GCP Day by Day"\nseriesOrder: 1\n')
+      'playlist-one.md',
+      frontmatter('playlist: "GCP Day by Day"\nplaylistOrder: 1\n')
     );
     const second = parseBlogMarkdown(
-      'series-two.md',
-      frontmatter('series: "GCP Day by Day"\nseriesOrder: 1\n')
+      'playlist-two.md',
+      frontmatter('playlist: "GCP Day by Day"\nplaylistOrder: 1\n')
     );
 
-    expect(() => validateBlogPosts([first, second])).toThrow(/Duplicate series position/);
+    expect(() => validateBlogPosts([first, second])).toThrow(/Duplicate playlist position/);
   });
 
-  it('rejects different series names that resolve to the same route slug', () => {
+  it('rejects different playlist names that resolve to the same route slug', () => {
     const first = parseBlogMarkdown(
-      'slug-series-one.md',
-      frontmatter('series: "GCP + Security"\nseriesOrder: 1\n')
+      'slug-playlist-one.md',
+      frontmatter('playlist: "GCP + Security"\nplaylistOrder: 1\n')
     );
     const second = parseBlogMarkdown(
-      'slug-series-two.md',
-      frontmatter('series: "GCP Security"\nseriesOrder: 2\n')
+      'slug-playlist-two.md',
+      frontmatter('playlist: "GCP Security"\nplaylistOrder: 2\n')
     );
 
     expect(() => validateBlogPosts([first, second])).toThrow(/resolve to the same slug/);
+  });
+
+  it('rejects a playlist that mixes platforms', () => {
+    const gcp = parseBlogMarkdown(
+      'gcp-playlist.md',
+      frontmatter('playlist: "Cloud Operations"\nplaylistOrder: 1\n')
+    );
+    const aws = parseBlogMarkdown(
+      'aws-playlist.md',
+      frontmatter('playlist: "Cloud Operations"\nplaylistOrder: 2\n')
+        .replace('platform: "GCP"', 'platform: "AWS"')
+        .replace('tags: ["GCP", "Security"]', 'tags: ["AWS", "Security"]')
+    );
+
+    expect(() => validateBlogPosts([gcp, aws])).toThrow(/mixes platforms/);
   });
 });

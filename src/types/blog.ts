@@ -13,6 +13,11 @@ export interface BlogPost {
   category?: string;
   platform?: string;
   tools?: string[];
+  playlist?: string;
+  playlistSlug?: string;
+  playlistOrder?: number;
+  playlistOnly?: boolean;
+  /** Legacy aliases accepted while old generated indexes are being replaced. */
   series?: string;
   seriesSlug?: string;
   seriesOrder?: number;

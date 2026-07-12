@@ -6,7 +6,9 @@ export interface TagConfig {
 }
 
 export interface TagGroup {
+  key: string;
   title: string;
+  description: string;
   tags: string[];
 }
 
@@ -115,19 +117,27 @@ export const TAG_CONFIGS: Record<string, TagConfig> = {
 
 export const TAG_GROUPS: TagGroup[] = [
   {
+    key: 'core',
     title: 'Core Topics',
+    description: 'Engineering concerns and operating practices',
     tags: ['DevOps', 'Cloud', 'Security', 'Networking', 'Containers', 'CI/CD', 'Automation', 'Orchestration', 'Monitoring']
   },
   {
+    key: 'platforms',
     title: 'Platforms',
+    description: 'Cloud and container runtime ecosystems',
     tags: ['GCP', 'AWS', 'Azure', 'Kubernetes', 'Docker']
   },
   {
+    key: 'tools',
     title: 'Tools & Services',
+    description: 'Products used to build and operate systems',
     tags: ['Cloud Armor', 'Load Balancer', 'GitHub Actions', 'Jenkins', 'Terraform', 'Ansible']
   },
   {
+    key: 'development',
     title: 'Development',
+    description: 'Source control and daily engineering workflows',
     tags: ['Developer Tools', 'Git', 'GitHub', 'Version Control', 'Command Line']
   }
 ];
@@ -170,7 +180,9 @@ export const getOrderedTagGroups = (tags: string[]): TagGroup[] => {
 
   if (uncategorizedTags.length > 0) {
     groups.push({
+      key: 'other',
       title: 'Other',
+      description: 'Additional subjects in the article library',
       tags: uncategorizedTags,
     });
   }

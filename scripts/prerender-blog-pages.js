@@ -105,21 +105,23 @@ function renderStaticArticle(post, markdown) {
     timeZone: 'UTC'
   }).format(new Date(`${post.date}T00:00:00Z`));
   const tags = post.tags.map(tag => `<span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold">${htmlEscape(tag)}</span>`).join('');
-  const seriesMarkup = post.series && post.seriesSlug
-    ? `<p class="mt-3"><a href="/series/${encodeURIComponent(post.seriesSlug)}">${htmlEscape(post.series)}${post.seriesOrder ? ` · Part ${post.seriesOrder}` : ''}</a></p>`
+  const playlistMarkup = post.playlist && post.playlistSlug
+    ? `<p class="mt-3"><a href="/playlists/${encodeURIComponent(post.playlistSlug)}">${htmlEscape(post.playlist)}${post.playlistOrder ? ` · Item ${post.playlistOrder}` : ''}</a></p>`
     : '';
 
   return `<div id="root">
-    <main data-prerendered="article" class="container mx-auto max-w-4xl px-4 py-8">
-      <nav aria-label="Breadcrumb" class="mb-6 text-sm"><a href="/blog">Back to Blog</a></nav>
+    <main data-prerendered="article" class="container mx-auto max-w-6xl px-4 py-12">
+      <nav aria-label="Breadcrumb" class="mb-8 text-sm"><a href="/blog">Back to Blog</a></nav>
       <article>
-        <header class="mb-8">
-          <div class="mb-4 flex flex-wrap gap-2">${tags}</div>
-          <h1 class="mb-4 text-3xl font-bold leading-tight md:text-4xl lg:text-5xl">${htmlEscape(post.title)}</h1>
-          <p class="text-muted-foreground"><time datetime="${htmlEscape(post.date)}">${formattedDate}</time> · ${htmlEscape(post.readTime)}</p>
-          ${seriesMarkup}
+        <header class="mb-10 max-w-4xl border-b pb-10">
+          <p class="mb-4 text-xs font-semibold uppercase text-primary">${htmlEscape(post.category)}</p>
+          <div class="mb-5 flex flex-wrap gap-2">${tags}</div>
+          <h1 class="text-3xl font-bold leading-tight md:text-5xl">${htmlEscape(post.title)}</h1>
+          <p class="mt-5 max-w-3xl text-lg text-muted-foreground">${htmlEscape(post.excerpt)}</p>
+          <p class="mt-6 text-sm text-muted-foreground">${htmlEscape(post.author)} · <time datetime="${htmlEscape(post.date)}">${formattedDate}</time> · ${htmlEscape(post.readTime)}</p>
+          ${playlistMarkup}
         </header>
-        <div class="prose prose-lg max-w-none dark:prose-invert">${renderedMarkdown}</div>
+        <div class="prose prose-lg max-w-3xl dark:prose-invert">${renderedMarkdown}</div>
       </article>
     </main>
   </div>`;
@@ -157,6 +159,7 @@ export function renderArticleHtml(shell, post, markdown) {
     author: {
       '@type': 'Person',
       name: post.author,
+      jobTitle: 'Sr Site Reliability Engineer',
       url: 'https://techwithdikshant.com/about'
     },
     publisher: {
@@ -181,60 +184,61 @@ export function renderArticleHtml(shell, post, markdown) {
   return html;
 }
 
-function collectSeries(posts) {
+function collectPlaylists(posts) {
   const collections = new Map();
   for (const post of posts) {
-    if (!post.series || !post.seriesSlug) continue;
-    const existing = collections.get(post.seriesSlug) || {
-      name: post.series,
-      slug: post.seriesSlug,
+    if (!post.playlist || !post.playlistSlug) continue;
+    const existing = collections.get(post.playlistSlug) || {
+      name: post.playlist,
+      slug: post.playlistSlug,
+      platform: post.platform,
       posts: []
     };
     existing.posts.push(post);
-    collections.set(post.seriesSlug, existing);
+    collections.set(post.playlistSlug, existing);
   }
 
   return Array.from(collections.values())
-    .map(series => ({
-      ...series,
-      posts: series.posts.sort((a, b) =>
-        (a.seriesOrder ?? Number.MAX_SAFE_INTEGER) - (b.seriesOrder ?? Number.MAX_SAFE_INTEGER)
+    .map(playlist => ({
+      ...playlist,
+      posts: playlist.posts.sort((a, b) =>
+        (a.playlistOrder ?? Number.MAX_SAFE_INTEGER) - (b.playlistOrder ?? Number.MAX_SAFE_INTEGER)
         || new Date(a.date).getTime() - new Date(b.date).getTime()
       )
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function renderStaticSeries(series) {
-  const articles = series.posts.map((post, index) => `
+function renderStaticPlaylist(playlist) {
+  const articles = playlist.posts.map((post, index) => `
     <li>
       <a href="/blog/${encodeURIComponent(post.id)}" class="block rounded-md border p-5">
-        <p class="mb-2 text-sm font-semibold">Part ${post.seriesOrder ?? index + 1}</p>
+        <p class="mb-2 text-sm font-semibold">Item ${post.playlistOrder ?? index + 1}</p>
         <h2 class="mb-2 text-xl font-semibold">${htmlEscape(post.title)}</h2>
         <p class="text-muted-foreground">${htmlEscape(post.excerpt)}</p>
       </a>
     </li>`).join('');
 
   return `<div id="root">
-    <main data-prerendered="series" class="container mx-auto max-w-4xl px-4 py-10">
+    <main data-prerendered="playlist" class="container mx-auto max-w-4xl px-4 py-10">
       <nav aria-label="Breadcrumb" class="mb-8 text-sm"><a href="/blog">Back to Blog</a></nav>
       <header class="mb-10 border-b pb-8">
-        <p class="mb-3 text-sm font-semibold">Series</p>
-        <h1 class="text-3xl font-bold md:text-4xl">${htmlEscape(series.name)}</h1>
-        <p class="mt-3 text-muted-foreground">${series.posts.length} ordered ${series.posts.length === 1 ? 'article' : 'articles'}.</p>
+        <p class="mb-3 text-sm font-semibold">Playlist · ${htmlEscape(playlist.platform)}</p>
+        <h1 class="text-3xl font-bold md:text-4xl">${htmlEscape(playlist.name)}</h1>
+        <p class="mt-3 text-muted-foreground">${playlist.posts.length} ordered ${playlist.posts.length === 1 ? 'article' : 'articles'}. Every article remains independently searchable.</p>
       </header>
       <ol class="space-y-4">${articles}</ol>
     </main>
   </div>`;
 }
 
-export function renderSeriesHtml(shell, series) {
-  const canonicalUrl = `https://techwithdikshant.com/series/${series.slug}`;
-  const title = `${series.name} Series | Tech With Dikshant`;
-  const description = `Read ${series.posts.length} ordered ${series.posts.length === 1 ? 'article' : 'articles'} in the ${series.name} technical series.`;
+export function renderPlaylistHtml(shell, playlist) {
+  const canonicalUrl = `https://techwithdikshant.com/playlists/${playlist.slug}`;
+  const title = `${playlist.name} Playlist | Tech With Dikshant`;
+  const description = `Browse ${playlist.posts.length} ordered ${playlist.posts.length === 1 ? 'article' : 'articles'} in the ${playlist.name} ${playlist.platform} playlist.`;
   let html = shell.replace(/<title>[^<]*<\/title>/i, `<title>${htmlEscape(title)}</title>`);
   html = replaceOrInsertMeta(html, 'name=description', description);
-  html = replaceOrInsertMeta(html, 'name=author', 'Dikshant Sharma');
+  html = replaceOrInsertMeta(html, 'name=author', 'Dikshant Rai');
   html = replaceOrInsertMeta(html, 'property=og:title', title);
   html = replaceOrInsertMeta(html, 'property=og:description', description);
   html = replaceOrInsertMeta(html, 'property=og:type', 'website');
@@ -245,35 +249,37 @@ export function renderSeriesHtml(shell, series) {
   html = injectStructuredData(html, {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: series.name,
+    name: playlist.name,
     description,
     url: canonicalUrl,
     mainEntity: {
       '@type': 'ItemList',
-      numberOfItems: series.posts.length,
-      itemListElement: series.posts.map((post, index) => ({
+      numberOfItems: playlist.posts.length,
+      itemListElement: playlist.posts.map((post, index) => ({
         '@type': 'ListItem',
         position: index + 1,
         url: post.canonicalUrl,
         name: post.title
       }))
     }
-  }, 'series');
-  return html.replace('<div id="root"></div>', renderStaticSeries(series));
+  }, 'playlist');
+  return html.replace('<div id="root"></div>', renderStaticPlaylist(playlist));
 }
 
 function renderStaticBlogListing(posts) {
-  const series = collectSeries(posts);
-  const seriesMarkup = series.length > 0
-    ? `<section aria-labelledby="series-heading" class="mb-10 border-y py-6">
-        <h2 id="series-heading" class="mb-4 text-xl font-semibold">Series</h2>
-        <ul class="grid grid-cols-1 gap-3 md:grid-cols-2">${series.map(item => `
-          <li><a href="/series/${encodeURIComponent(item.slug)}" class="flex justify-between rounded-md border p-4"><span>${htmlEscape(item.name)}</span><span>${item.posts.length} ${item.posts.length === 1 ? 'part' : 'parts'}</span></a></li>`).join('')}
+  const playlists = collectPlaylists(posts);
+  const listingPosts = posts.filter(post => !post.playlistOnly);
+  const playlistMarkup = playlists.length > 0
+    ? `<section aria-labelledby="playlists-heading" class="mb-10 border-y py-6">
+        <h2 id="playlists-heading" class="mb-4 text-xl font-semibold">Playlists</h2>
+        <p class="mb-4 text-sm text-muted-foreground">Optional ordered collections. Every article also remains in the normal library.</p>
+        <ul class="grid grid-cols-1 gap-3 md:grid-cols-2">${playlists.map(item => `
+          <li><a href="/playlists/${encodeURIComponent(item.slug)}" class="flex justify-between rounded-md border p-4"><span>${htmlEscape(item.name)}</span><span>${item.posts.length} ${item.posts.length === 1 ? 'article' : 'articles'}</span></a></li>`).join('')}
         </ul>
       </section>`
     : '';
-  const articles = posts.map(post => `
-    <article class="rounded-lg border bg-card p-5">
+  const articles = listingPosts.map(post => `
+    <article class="rounded-md border bg-card p-6">
       <p class="mb-2 text-sm text-muted-foreground"><time datetime="${htmlEscape(post.date)}">${htmlEscape(post.date)}</time> · ${htmlEscape(post.readTime)}</p>
       <h2 class="mb-2 text-xl font-semibold"><a href="/blog/${encodeURIComponent(post.id)}">${htmlEscape(post.title)}</a></h2>
       <p class="mb-4 text-muted-foreground">${htmlEscape(post.excerpt)}</p>
@@ -281,12 +287,13 @@ function renderStaticBlogListing(posts) {
     </article>`).join('');
 
   return `<div id="root">
-    <main data-prerendered="blog-listing" class="container mx-auto px-4 py-12">
-      <header class="mx-auto mb-12 max-w-3xl text-center">
-        <h1 class="mb-4 text-4xl font-bold md:text-5xl">DevOps Blog</h1>
-        <p class="text-xl text-muted-foreground">Cloud implementation logs, CI/CD notes, and hands-on technical tutorials organized by tags.</p>
+    <main data-prerendered="blog-listing" class="container mx-auto px-4 py-14">
+      <header class="mb-10 max-w-3xl border-b pb-8">
+        <p class="mb-2 text-xs font-semibold uppercase text-primary">Implementation library</p>
+        <h1 class="text-4xl font-bold md:text-5xl">DevOps field notes</h1>
+        <p class="mt-4 text-lg text-muted-foreground">Cloud infrastructure, delivery pipelines, networking, and container operations explained through practical engineering work.</p>
       </header>
-      ${seriesMarkup}
+      ${playlistMarkup}
       <section aria-label="Latest articles" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">${articles}</section>
     </main>
   </div>`;
@@ -300,7 +307,7 @@ export function renderBlogIndexHtml(shell, posts) {
   let html = shell.replace(/<title>[^<]*<\/title>/i, `<title>${htmlEscape(title)}</title>`);
   html = replaceOrInsertMeta(html, 'name=description', description);
   html = replaceOrInsertMeta(html, 'name=keywords', 'DevOps blog, Docker tutorials, Kubernetes guide, CI/CD pipeline, cloud computing, automation');
-  html = replaceOrInsertMeta(html, 'name=author', 'Dikshant Sharma');
+  html = replaceOrInsertMeta(html, 'name=author', 'Dikshant Rai');
   html = replaceOrInsertMeta(html, 'property=og:title', title);
   html = replaceOrInsertMeta(html, 'property=og:description', description);
   html = replaceOrInsertMeta(html, 'property=og:type', 'website');
@@ -308,6 +315,7 @@ export function renderBlogIndexHtml(shell, posts) {
   html = replaceOrInsertMeta(html, 'name=twitter:title', title);
   html = replaceOrInsertMeta(html, 'name=twitter:description', description);
   html = replaceCanonical(html, canonicalUrl);
+  const listingPosts = posts.filter(post => !post.playlistOnly);
   html = injectStructuredData(html, {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -316,8 +324,8 @@ export function renderBlogIndexHtml(shell, posts) {
     url: canonicalUrl,
     mainEntity: {
       '@type': 'ItemList',
-      numberOfItems: posts.length,
-      itemListElement: posts.map((post, index) => ({
+      numberOfItems: listingPosts.length,
+      itemListElement: listingPosts.map((post, index) => ({
         '@type': 'ListItem',
         position: index + 1,
         url: post.canonicalUrl,
@@ -333,53 +341,126 @@ const STATIC_PAGES = [
     route: '/',
     title: 'Tech With Dikshant - DevOps Tutorials & Insights',
     description: 'Master DevOps with practical tutorials on Docker, Kubernetes, CI/CD, cloud platforms, networking, security, and automation.',
-    heading: 'Master DevOps with Dikshant',
-    body: 'Independent implementation logs and hands-on technical guides grounded in real engineering work.'
+    heading: 'Tech With Dikshant',
+    body: 'Practical cloud, CI/CD, networking, and container guides built around the decisions engineers make in real systems.'
   },
   {
     route: '/about',
-    title: 'About Dikshant Sharma | DevOps Engineer and Educator',
-    description: "Learn about Dikshant Sharma's DevOps and cloud engineering background, technical focus, and practical teaching approach.",
-    heading: 'About Dikshant Sharma',
-    body: 'DevOps engineer, cloud architect, and technical educator focused on making complex infrastructure concepts practical and understandable.'
+    title: 'About Dikshant Rai | Sr Site Reliability Engineer',
+    description: "Learn about Dikshant Rai's work as a Sr Site Reliability Engineer, technical focus, and practical writing approach.",
+    heading: 'Dikshant Rai',
+    body: 'Sr Site Reliability Engineer documenting the implementation details, tradeoffs, and operational context behind reliable modern infrastructure.'
   },
   {
     route: '/newsletter',
     title: 'DevOps Newsletter | Tech With Dikshant',
     description: 'Subscribe for practical DevOps tutorials, cloud engineering notes, CI/CD guidance, and new technical articles.',
-    heading: 'DevOps Newsletter',
-    body: 'Receive new technical tutorials, implementation notes, and cloud engineering updates.'
+    heading: 'The useful part of the week, in one email',
+    body: 'New DevOps field notes, implementation lessons, and operational context, sent when there is something worth reading.'
   },
   {
     route: '/connect',
-    title: 'Contact Dikshant Sharma | Tech With Dikshant',
-    description: 'Contact Dikshant Sharma about DevOps, cloud engineering, technical collaboration, or questions about published tutorials.',
-    heading: 'Contact Dikshant Sharma',
-    body: 'Get in touch about DevOps, cloud engineering, technical collaboration, or a published tutorial.'
+    title: 'Contact Dikshant Rai | Sr Site Reliability Engineer',
+    description: 'Contact Dikshant Rai about site reliability engineering, cloud infrastructure, technical collaboration, or published tutorials.',
+    heading: 'Start a useful conversation',
+    body: 'Ask about a published guide, discuss a DevOps problem, or propose a technical collaboration.'
   }
 ];
 
+const STATIC_FOCUS_TRACKS = [
+  {
+    title: 'GCP security',
+    tag: 'GCP',
+    matches: post => post.tags.includes('GCP') && post.tags.includes('Security')
+  },
+  {
+    title: 'Delivery automation',
+    tag: 'CI/CD',
+    matches: post => post.tags.includes('CI/CD')
+  },
+  {
+    title: 'Container operations',
+    tag: 'Containers',
+    matches: post => post.tags.includes('Containers')
+  }
+];
+
+function renderStaticFocusTracks(posts) {
+  return `<section aria-labelledby="focus-tracks-heading" class="border-y bg-card">
+    <div class="container mx-auto max-w-6xl px-4 py-14">
+      <p class="mb-2 text-xs font-semibold uppercase text-primary">Explore by focus</p>
+      <h2 id="focus-tracks-heading" class="mb-8 text-3xl font-semibold">Build depth in one area</h2>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">${STATIC_FOCUS_TRACKS.map(track => {
+        const matchingPosts = posts.filter(track.matches);
+        return `<article class="rounded-md border bg-background p-5">
+          <h3 class="text-xl font-semibold">${htmlEscape(track.title)}</h3>
+          <p class="mt-2 text-sm">${matchingPosts.length} ${matchingPosts.length === 1 ? 'field note' : 'field notes'}</p>
+          <ul class="mt-4">${matchingPosts.slice(0, 2).map(post => `<li><a href="/blog/${encodeURIComponent(post.id)}">${htmlEscape(post.title)}</a></li>`).join('')}</ul>
+          <p class="mt-5"><a href="/blog?tag=${encodeURIComponent(track.tag)}">Explore ${htmlEscape(track.title)}</a></p>
+        </article>`;
+      }).join('')}</div>
+    </div>
+  </section>`;
+}
+
 function renderStaticPageRoot(page, posts) {
-  const featured = page.route === '/'
-    ? `<section aria-labelledby="latest-heading" class="mt-12">
-        <h2 id="latest-heading" class="mb-5 text-2xl font-semibold">Latest DevOps Articles</h2>
-        <div class="grid grid-cols-1 gap-5 md:grid-cols-3">${posts.slice(0, 3).map(post => `
-          <article class="rounded-lg border p-5">
+  if (page.route === '/') {
+    const listingPosts = posts.filter(post => !post.playlistOnly);
+    return `<div id="root">
+      <main data-prerendered="static-page">
+        <section class="relative flex min-h-[500px] items-center overflow-hidden bg-black text-white">
+          <img src="/images/site/devops-operations-hero.jpg" alt="Cloud infrastructure operations workspace" class="absolute inset-0 h-full w-full object-cover" />
+          <div class="absolute inset-0 bg-black/60"></div>
+          <header class="container relative mx-auto max-w-6xl px-4">
+            <p class="mb-5 text-xs font-semibold uppercase text-cyan-300">Production-minded DevOps notes</p>
+            <h1 class="text-4xl font-bold md:text-6xl">${htmlEscape(page.heading)}</h1>
+            <p class="mt-6 max-w-xl text-xl text-white/80">${htmlEscape(page.body)}</p>
+            <p class="mt-8"><a href="/blog" class="font-semibold text-cyan-300">Read the field notes</a></p>
+          </header>
+        </section>
+        <section aria-labelledby="latest-heading" class="container mx-auto max-w-6xl px-4 py-16">
+        <p class="mb-2 text-xs font-semibold uppercase text-primary">Recently published</p>
+        <h2 id="latest-heading" class="mb-8 text-3xl font-semibold">Latest field notes</h2>
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-3">${listingPosts.slice(0, 3).map(post => `
+          <article class="rounded-md border bg-card p-5">
             <h3 class="mb-2 text-lg font-semibold"><a href="/blog/${encodeURIComponent(post.id)}">${htmlEscape(post.title)}</a></h3>
             <p class="text-muted-foreground">${htmlEscape(post.excerpt)}</p>
           </article>`).join('')}
         </div>
         <p class="mt-6"><a href="/blog" class="font-semibold">Explore all articles</a></p>
-      </section>`
-    : `<p class="mt-8"><a href="/blog" class="font-semibold">Explore the DevOps blog</a></p>`;
+      </section>
+      ${renderStaticFocusTracks(listingPosts)}
+      </main>
+    </div>`;
+  }
+
+  if (page.route === '/about') {
+    return `<div id="root">
+      <main data-prerendered="static-page" class="container mx-auto max-w-6xl px-4 py-16">
+        <header class="grid gap-10 border-b pb-12 md:grid-cols-[minmax(0,1fr)_20rem] md:items-center">
+          <div class="max-w-3xl">
+            <p class="mb-3 text-xs font-semibold uppercase text-primary">Sr Site Reliability Engineer</p>
+            <h1 class="mb-5 text-4xl font-bold md:text-6xl">${htmlEscape(page.heading)}</h1>
+            <p class="text-xl text-muted-foreground">${htmlEscape(page.body)}</p>
+            <p class="mt-8"><a href="/blog" class="font-semibold">Explore the DevOps field notes</a></p>
+          </div>
+          <figure>
+            <img src="/images/about/dikshant-rai.jpg" alt="Dikshant Rai, Sr Site Reliability Engineer" width="868" height="1085" fetchpriority="high" class="aspect-[4/5] w-full rounded-md border object-cover" />
+            <figcaption class="mt-3 text-xs text-muted-foreground">Engineering reliable cloud systems and documenting the decisions behind them.</figcaption>
+          </figure>
+        </header>
+      </main>
+    </div>`;
+  }
 
   return `<div id="root">
     <main data-prerendered="static-page" class="container mx-auto max-w-5xl px-4 py-16">
       <header class="max-w-3xl">
+        <p class="mb-3 text-xs font-semibold uppercase text-primary">Tech With Dikshant</p>
         <h1 class="mb-5 text-4xl font-bold md:text-5xl">${htmlEscape(page.heading)}</h1>
         <p class="text-xl text-muted-foreground">${htmlEscape(page.body)}</p>
       </header>
-      ${featured}
+      <p class="mt-8"><a href="/blog" class="font-semibold">Explore the DevOps field notes</a></p>
     </main>
   </div>`;
 }
@@ -388,7 +469,7 @@ export function renderStaticPageHtml(shell, page, posts = []) {
   const canonicalUrl = `https://techwithdikshant.com${page.route === '/' ? '' : page.route}`;
   let html = shell.replace(/<title>[^<]*<\/title>/i, `<title>${htmlEscape(page.title)}</title>`);
   html = replaceOrInsertMeta(html, 'name=description', page.description);
-  html = replaceOrInsertMeta(html, 'name=author', 'Dikshant Sharma');
+  html = replaceOrInsertMeta(html, 'name=author', 'Dikshant Rai');
   html = replaceOrInsertMeta(html, 'property=og:title', page.title);
   html = replaceOrInsertMeta(html, 'property=og:description', page.description);
   html = replaceOrInsertMeta(html, 'property=og:type', page.route === '/about' ? 'profile' : 'website');
@@ -396,12 +477,22 @@ export function renderStaticPageHtml(shell, page, posts = []) {
   html = replaceOrInsertMeta(html, 'name=twitter:title', page.title);
   html = replaceOrInsertMeta(html, 'name=twitter:description', page.description);
   html = replaceCanonical(html, canonicalUrl);
+  const isAboutPage = page.route === '/about';
   html = injectStructuredData(html, {
     '@context': 'https://schema.org',
-    '@type': page.route === '/about' ? 'ProfilePage' : 'WebPage',
+    '@type': isAboutPage ? 'ProfilePage' : 'WebPage',
     name: page.heading,
     description: page.description,
-    url: canonicalUrl
+    url: canonicalUrl,
+    ...(isAboutPage && {
+      mainEntity: {
+        '@type': 'Person',
+        name: 'Dikshant Rai',
+        jobTitle: 'Sr Site Reliability Engineer',
+        image: 'https://techwithdikshant.com/images/about/dikshant-rai.jpg',
+        url: canonicalUrl
+      }
+    })
   }, 'webpage');
   return html.replace('<div id="root"></div>', renderStaticPageRoot(page, posts));
 }
@@ -459,16 +550,16 @@ async function main() {
     writeFile(join(DIST_DIR, 'blog.html'), blogIndexHtml)
   ]);
 
-  const seriesDir = join(DIST_DIR, 'series');
-  const seriesCollections = collectSeries(posts);
-  if (seriesCollections.length > 0) await mkdir(seriesDir, { recursive: true });
-  for (const series of seriesCollections) {
-    const seriesHtml = renderSeriesHtml(shell, series);
-    const routeDir = join(seriesDir, series.slug);
+  const playlistsDir = join(DIST_DIR, 'playlists');
+  const playlistCollections = collectPlaylists(posts);
+  if (playlistCollections.length > 0) await mkdir(playlistsDir, { recursive: true });
+  for (const playlist of playlistCollections) {
+    const playlistHtml = renderPlaylistHtml(shell, playlist);
+    const routeDir = join(playlistsDir, playlist.slug);
     await mkdir(routeDir, { recursive: true });
     await Promise.all([
-      writeFile(join(routeDir, 'index.html'), seriesHtml),
-      writeFile(join(seriesDir, `${series.slug}.html`), seriesHtml)
+      writeFile(join(routeDir, 'index.html'), playlistHtml),
+      writeFile(join(playlistsDir, `${playlist.slug}.html`), playlistHtml)
     ]);
   }
 
@@ -481,7 +572,7 @@ async function main() {
     }
   }
   await writeFile(join(DIST_DIR, '404.html'), renderNotFoundHtml(shell));
-  console.log(`Prerendered ${posts.length} blog articles and ${seriesCollections.length} series.`);
+  console.log(`Prerendered ${posts.length} blog articles and ${playlistCollections.length} playlists.`);
 }
 
 const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;

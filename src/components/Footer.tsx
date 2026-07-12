@@ -1,25 +1,25 @@
 import { Link } from "react-router-dom";
-import { Linkedin, Twitter, Github, Mail, ExternalLink } from "lucide-react";
+import { Linkedin, Twitter, Github, Mail, ExternalLink, TerminalSquare, Rss } from "lucide-react";
 
 export const Footer = () => {
   return (
-    <footer className="border-t bg-muted/50">
-      <div className="container mx-auto py-12 px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+    <footer className="border-t bg-card">
+      <div className="content-shell py-12">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1.4fr_0.7fr_0.7fr_1fr]">
           {/* Brand Section */}
           <div className="space-y-4">
-            <div className="text-xl font-semibold text-gradient">
+            <div className="flex items-center gap-2 font-semibold">
+              <TerminalSquare className="h-5 w-5 text-primary" />
               Tech With Dikshant
             </div>
             <p className="text-sm text-muted-foreground">
-              Master DevOps with practical tutorials, insights, and real-world examples.
-              Learn Docker, Kubernetes, CI/CD, and cloud technologies.
+              Tested implementation notes for engineers operating cloud platforms, delivery systems, and production infrastructure.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
+            <h3 className="mb-4 text-sm font-semibold">Navigate</h3>
             <div className="space-y-2">
               <Link
                 to="/"
@@ -50,7 +50,7 @@ export const Footer = () => {
 
           {/* Resources */}
           <div>
-            <h3 className="font-semibold mb-4">Resources</h3>
+            <h3 className="mb-4 text-sm font-semibold">Read</h3>
             <div className="space-y-2">
               <Link
                 to="/newsletter"
@@ -70,12 +70,15 @@ export const Footer = () => {
               >
                 About Me
               </Link>
+              <a href="/rss.xml" className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Rss className="h-3.5 w-3.5" /> RSS feed
+              </a>
             </div>
           </div>
 
           {/* Connect */}
           <div>
-            <h3 className="font-semibold mb-4">Connect with Me</h3>
+            <h3 className="mb-4 text-sm font-semibold">Elsewhere</h3>
             <div className="space-y-3">
               <a
                 href="https://linkedin.com/in/dikshant-rai"
@@ -118,10 +121,9 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t">
-          <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} Tech With Dikshant. All rights reserved.
-          </p>
+        <div className="mt-10 flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Tech With Dikshant.</p>
+          <p>Built for engineers who verify before they deploy.</p>
         </div>
       </div>
     </footer>

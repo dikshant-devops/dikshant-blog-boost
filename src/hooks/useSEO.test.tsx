@@ -1,11 +1,11 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useSEO, useArticleStructuredData } from './useSEO';
+import { useSEO, useArticleStructuredData, useCollectionStructuredData } from './useSEO';
 
 afterEach(() => {
   // Clean up any SEO meta tags left over
   document.querySelectorAll('meta[data-seo="true"]').forEach(el => el.remove());
-  document.querySelectorAll('script[data-structured-data="article"]').forEach(el => el.remove());
+  document.querySelectorAll('script[data-structured-data]').forEach(el => el.remove());
   document.querySelectorAll('link[rel="canonical"]').forEach(el => el.remove());
   document.querySelectorAll('meta[data-test-static="true"]').forEach(el => el.remove());
 });
@@ -118,7 +118,7 @@ describe('useSEO', () => {
     renderHook(() => useSEO({ title: 'Default', description: 'desc' }));
 
     const author = document.querySelector('meta[name="author"]');
-    expect(author?.getAttribute('content')).toBe('Dikshant Sharma');
+    expect(author?.getAttribute('content')).toBe('Dikshant Rai');
   });
 
   it('uses absolute default image when not provided', () => {
@@ -169,6 +169,7 @@ describe('useArticleStructuredData', () => {
     expect(data.headline).toBe('My Article');
     expect(data.description).toBe('My desc');
     expect(data.author.name).toBe('Dikshant');
+    expect(data.author.jobTitle).toBe('Sr Site Reliability Engineer');
     expect(data.datePublished).toBe('2024-06-01');
     expect(data.keywords).toBe('Docker, CI/CD');
     expect(data.timeRequired).toBe('5 min read');
@@ -205,7 +206,7 @@ describe('useArticleStructuredData', () => {
     renderHook(() => useArticleStructuredData({
       title: 'Hydrated article',
       description: 'Description',
-      author: 'Dikshant Sharma',
+      author: 'Dikshant Rai',
       datePublished: '2024-01-01',
       url: 'https://example.com/blog/hydrated',
     }));
@@ -215,5 +216,29 @@ describe('useArticleStructuredData', () => {
     expect(scripts[0]).toBe(first);
     expect(JSON.parse(scripts[0].textContent || '{}').mainEntityOfPage['@id'])
       .toBe('https://example.com/blog/hydrated');
+  });
+});
+
+describe('useCollectionStructuredData', () => {
+  it('replaces stale route schema with the active collection', () => {
+    const stale = document.createElement('script');
+    stale.type = 'application/ld+json';
+    stale.setAttribute('data-structured-data', 'blog-listing');
+    stale.textContent = JSON.stringify({ '@type': 'CollectionPage', mainEntity: { numberOfItems: 6 } });
+    document.head.appendChild(stale);
+
+    renderHook(() => useCollectionStructuredData({
+      name: 'GCP Security Essentials',
+      description: 'Ordered GCP security articles.',
+      url: 'https://example.com/playlists/gcp-security-essentials',
+      items: [{ name: 'Cloud Armor', url: 'https://example.com/blog/cloud-armor' }],
+    }, 'playlist'));
+
+    const scripts = document.querySelectorAll('script[data-structured-data]');
+    expect(scripts).toHaveLength(1);
+    expect(scripts[0]).toHaveAttribute('data-structured-data', 'playlist');
+    const data = JSON.parse(scripts[0].textContent || '{}');
+    expect(data.mainEntity.numberOfItems).toBe(1);
+    expect(data.mainEntity.itemListElement[0].url).toContain('/blog/cloud-armor');
   });
 });

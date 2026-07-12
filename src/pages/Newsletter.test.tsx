@@ -22,21 +22,19 @@ describe('Newsletter Page', () => {
 
   it('renders benefits section', () => {
     render(<Newsletter />);
-    expect(screen.getByText("What You'll Get")).toBeInTheDocument();
-    expect(screen.getByText('Weekly DevOps Tips')).toBeInTheDocument();
-    expect(screen.getByText('Exclusive Tutorials')).toBeInTheDocument();
-    expect(screen.getByText('Industry Updates')).toBeInTheDocument();
-    expect(screen.getByText('Early Access')).toBeInTheDocument();
+    expect(screen.getByText('What arrives')).toBeInTheDocument();
+    expect(screen.getByText('New implementation guides')).toBeInTheDocument();
+    expect(screen.getByText('Operational lessons')).toBeInTheDocument();
+    expect(screen.getByText('Tool and platform updates')).toBeInTheDocument();
   });
 
-  it('renders subscriber stats', () => {
+  it('does not render fabricated subscriber stats', () => {
     render(<Newsletter />);
-    expect(screen.getByText('Weekly')).toBeInTheDocument();
-    expect(screen.getByText('500+')).toBeInTheDocument();
+    expect(screen.queryByText('500+')).not.toBeInTheDocument();
   });
 
-  it('renders testimonial section', () => {
+  it('renders a clear privacy statement instead of an anonymous testimonial', () => {
     render(<Newsletter />);
-    expect(screen.getByText(/Tech With Dikshant's newsletter/)).toBeInTheDocument();
+    expect(screen.getByText(/used only for this newsletter/i)).toBeInTheDocument();
   });
 });

@@ -14,11 +14,12 @@ describe('Connect Page', () => {
     vi.stubGlobal('fetch', vi.fn());
     // Mock import.meta.env for Turnstile
     vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '');
+    window.turnstile = undefined;
   });
 
   it('renders page heading', () => {
     render(<Connect />);
-    expect(screen.getByText("Connect")).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Start a useful conversation' })).toBeInTheDocument();
   });
 
   it('renders all form fields', () => {
@@ -31,7 +32,7 @@ describe('Connect Page', () => {
 
   it('renders social links section', () => {
     render(<Connect />);
-    expect(screen.getByText('Follow Me Online')).toBeInTheDocument();
+    expect(screen.getByText('Find me elsewhere')).toBeInTheDocument();
     expect(screen.getAllByText('LinkedIn').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Twitter').length).toBeGreaterThan(0);
     expect(screen.getAllByText('GitHub').length).toBeGreaterThan(0);
@@ -39,7 +40,7 @@ describe('Connect Page', () => {
 
   it('renders send button', () => {
     render(<Connect />);
-    expect(screen.getByText('Send Message')).toBeInTheDocument();
+    expect(screen.getByText('Send message')).toBeInTheDocument();
   });
 
   describe('form input handling', () => {
@@ -61,7 +62,7 @@ describe('Connect Page', () => {
   describe('form validation', () => {
     it('shows missing fields toast when submitting empty form', async () => {
       render(<Connect />);
-      fireEvent.submit(screen.getByText('Send Message').closest('form')!);
+      fireEvent.submit(screen.getByText('Send message').closest('form')!);
 
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
         title: 'Missing fields',
@@ -78,11 +79,48 @@ describe('Connect Page', () => {
       fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Test', name: 'subject' } });
       fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello', name: 'message' } });
 
-      fireEvent.submit(screen.getByText('Send Message').closest('form')!);
+      fireEvent.submit(screen.getByText('Send message').closest('form')!);
 
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
         title: 'Verification required',
         variant: 'destructive',
+      }));
+    });
+  });
+
+  it('preserves the contact API endpoint and Turnstile payload', async () => {
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'test-site-key');
+    window.turnstile = {
+      reset: vi.fn(),
+      render: vi.fn((_element, options) => {
+        options.callback('verified-token');
+        return 'widget-id';
+      }),
+    };
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true }),
+    } as Response);
+
+    render(<Connect />);
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'John', name: 'name' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'john@test.com', name: 'email' } });
+    fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Architecture', name: 'subject' } });
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Please review this system.', name: 'message' } });
+
+    await waitFor(() => expect(window.turnstile?.render).toHaveBeenCalled());
+    fireEvent.submit(screen.getByText('Send message').closest('form')!);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/contact', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'John',
+          email: 'john@test.com',
+          subject: 'Architecture',
+          message: 'Please review this system.',
+          turnstileToken: 'verified-token',
+        }),
       }));
     });
   });
@@ -110,9 +148,9 @@ describe('Connect Page', () => {
     });
   });
 
-  it('renders response time information', () => {
+  it('renders guidance for a useful and safe inquiry', () => {
     render(<Connect />);
-    expect(screen.getByText('Response Time')).toBeInTheDocument();
-    expect(screen.getByText('Within 24 hours')).toBeInTheDocument();
+    expect(screen.getByText('For the best response')).toBeInTheDocument();
+    expect(screen.getByText(/Never send credentials/)).toBeInTheDocument();
   });
 });

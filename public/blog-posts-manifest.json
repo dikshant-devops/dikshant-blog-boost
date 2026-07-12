@@ -1,8 +1,11 @@
 [
+  "aws-iam-fundamentals.md",
   "Cloud_Armor.md",
+  "gcp-iam-fundamentals.md",
   "getting-started-with-docker.md",
   "git-commands-visual-guide.md",
   "github-actions-cicd.md",
   "Host-Based vs Path-Based Routing.md",
+  "kubernetes-deployments-introduction.md",
   "kubernetes-introduction.md"
 ]

@@ -63,10 +63,10 @@ describe('Admin Page', () => {
     expect(screen.getByLabelText('Content (Markdown)')).toBeInTheDocument();
   });
 
-  it('has default author value "Dikshant Sharma"', () => {
+  it('has default author value "Dikshant Rai"', () => {
     render(<Admin />);
     const authorInput = screen.getByLabelText('Author') as HTMLInputElement;
-    expect(authorInput.value).toBe('Dikshant Sharma');
+    expect(authorInput.value).toBe('Dikshant Rai');
   });
 
   describe('generate button state', () => {
@@ -199,7 +199,7 @@ describe('Admin Page', () => {
       vi.restoreAllMocks();
     });
 
-    it('omits series metadata when the post is not part of a playlist', async () => {
+    it('omits playlist metadata for a standalone article', async () => {
       const mockClick = vi.fn();
       const origCreateElement = document.createElement.bind(document);
       vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: any) => {
@@ -221,14 +221,14 @@ describe('Admin Page', () => {
       const generatedBlob = mockCreateObjectURL.mock.calls[0][0] as Blob;
       const generatedMarkdown = await readBlobAsText(generatedBlob);
 
-      expect(generatedMarkdown).not.toContain('series:');
-      expect(generatedMarkdown).not.toContain('seriesOrder:');
+      expect(generatedMarkdown).not.toContain('playlist:');
+      expect(generatedMarkdown).not.toContain('playlistOrder:');
       expect(mockClick).toHaveBeenCalled();
 
       vi.restoreAllMocks();
     });
 
-    it('adds series metadata only after explicit opt-in', async () => {
+    it('adds playlist metadata only after explicit opt-in', async () => {
       const mockClick = vi.fn();
       const origCreateElement = document.createElement.bind(document);
       vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: any) => {
@@ -244,16 +244,21 @@ describe('Admin Page', () => {
 
       render(<Admin />);
       fillValidDraft('Production Google Cloud Security Policy Guide');
-      fireEvent.click(screen.getByRole('switch', { name: 'Add to a series' }));
-      fireEvent.change(screen.getByLabelText('Series name'), { target: { value: 'Production GCP Security' } });
-      fireEvent.change(screen.getByLabelText('Part number'), { target: { value: '3' } });
+      fireEvent.change(screen.getByLabelText('Platform'), { target: { value: 'GCP' } });
+      fireEvent.change(screen.getByPlaceholderText('Add a tag'), { target: { value: 'GCP' } });
+      fireEvent.click(getTagAddButton());
+      fireEvent.click(screen.getByRole('switch', { name: 'Add to a playlist' }));
+      fireEvent.change(screen.getByLabelText('Playlist name'), { target: { value: 'Production GCP Security' } });
+      fireEvent.change(screen.getByLabelText('Position'), { target: { value: '3' } });
+      fireEvent.click(screen.getByRole('switch', { name: 'Playlist-only discovery' }));
       fireEvent.click(screen.getByText('Generate Blog Post'));
 
       const generatedMarkdown = await readBlobAsText(mockCreateObjectURL.mock.calls[0][0] as Blob);
       const parsed = matter(generatedMarkdown).data;
 
-      expect(parsed.series).toBe('Production GCP Security');
-      expect(parsed.seriesOrder).toBe(3);
+      expect(parsed.playlist).toBe('Production GCP Security');
+      expect(parsed.playlistOrder).toBe(3);
+      expect(parsed.playlistOnly).toBe(true);
       expect(mockClick).toHaveBeenCalled();
 
       vi.restoreAllMocks();
@@ -305,8 +310,10 @@ describe('Admin Page', () => {
       author: '',
       image: '/logo.svg',
       tags: [],
-      series: 'GCP Day by Day',
-      seriesOrder: '0'
+      platform: 'Azure',
+      playlist: 'GCP Day by Day',
+      playlistOrder: '0',
+      playlistOnly: false
     });
 
     expect(errors).toEqual(expect.arrayContaining([

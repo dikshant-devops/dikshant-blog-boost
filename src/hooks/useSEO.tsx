@@ -26,6 +26,13 @@ type ArticleStructuredData = {
   url?: string;
 };
 
+type CollectionStructuredData = {
+  name: string;
+  description: string;
+  url: string;
+  items: Array<{ name: string; url: string }>;
+};
+
 export const useSEO = (data: SEOData | null) => {
   const imageUrl = useMemo(() => {
     if (!data) return '';
@@ -38,7 +45,7 @@ export const useSEO = (data: SEOData | null) => {
     ...(data ? [
     { name: 'description', content: data.description },
     { name: 'keywords', content: data.keywords || '' },
-    { name: 'author', content: data.author || 'Dikshant Sharma' },
+    { name: 'author', content: data.author || 'Dikshant Rai' },
     { name: 'robots', content: data.robots || 'index, follow' },
 
     // Open Graph
@@ -133,6 +140,7 @@ export const useArticleStructuredData = (data: ArticleStructuredData | null) => 
     "author": {
       "@type": "Person",
       "name": data.author,
+      "jobTitle": "Sr Site Reliability Engineer",
       "url": "https://techwithdikshant.com/about"
     },
     "publisher": {
@@ -158,6 +166,8 @@ export const useArticleStructuredData = (data: ArticleStructuredData | null) => 
   useEffect(() => {
     if (!structuredData) return;
 
+    document.querySelectorAll('script[data-structured-data]:not([data-structured-data="article"])')
+      .forEach(script => script.remove());
     const scripts = Array.from(document.querySelectorAll('script[data-structured-data="article"]'));
     const [existing, ...duplicates] = scripts;
     duplicates.forEach(script => script.remove());
@@ -167,4 +177,39 @@ export const useArticleStructuredData = (data: ArticleStructuredData | null) => 
     script.textContent = JSON.stringify(structuredData);
     if (!existing) document.head.appendChild(script);
   }, [structuredData]);
+};
+
+export const useCollectionStructuredData = (data: CollectionStructuredData | null, key: string) => {
+  const structuredData = useMemo(() => data ? ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": data.name,
+    "description": data.description,
+    "url": data.url,
+    "mainEntity": {
+      "@type": "ItemList",
+      "numberOfItems": data.items.length,
+      "itemListElement": data.items.map((item, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "url": item.url,
+        "name": item.name,
+      }))
+    }
+  }) : null, [data]);
+
+  useEffect(() => {
+    if (!structuredData) return;
+
+    const selector = `script[data-structured-data="${key}"]`;
+    const scripts = Array.from(document.querySelectorAll('script[data-structured-data]'));
+    const existing = scripts.find(script => script.matches(selector));
+    scripts.filter(script => script !== existing).forEach(script => script.remove());
+
+    const script = existing || document.createElement('script');
+    script.type = 'application/ld+json';
+    script.setAttribute('data-structured-data', key);
+    script.textContent = JSON.stringify(structuredData);
+    if (!existing) document.head.appendChild(script);
+  }, [key, structuredData]);
 };

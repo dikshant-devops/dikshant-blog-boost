@@ -38,7 +38,7 @@ title: "Configure Cloud Armor for Production Workloads"
 excerpt: "A tested Cloud Armor security guide with policy configuration, verification commands, observed results, and rollback steps."
 date: "2024-01-20"
 readTime: "8 min read"
-author: "Dikshant Sharma"
+author: "Dikshant Rai"
 category: "Security"
 platform: "GCP"
 difficulty: "Beginner"
@@ -68,13 +68,14 @@ First, install Docker...
 | `excerpt` | String | `"A tested Docker deployment..."` | Required meta description; 90-180 characters |
 | `date` | String | `"2024-01-20"` | Required publication date (YYYY-MM-DD) |
 | `updatedDate` | String | `"2024-01-22"` | Last verified update; cannot predate `date` |
-| `author` | String | `"Dikshant Sharma"` | Author displayed in metadata and schema |
+| `author` | String | `"Dikshant Rai"` | Author displayed in metadata and schema |
 | `readTime` | String | `"5 min read"` | Optional override; otherwise calculated at 200 words/minute |
 | `tags` | Array | `["GCP", "Security"]` | 1-8 unique public navigation tags |
 | `category` | String | `"Security"` | Broad engineering concern: Cloud, CI/CD, Containers, Networking, Security, Developer Tools, Observability, DevOps |
 | `platform` | String | `"GCP"` | Provider/platform for filtering: GCP, AWS, Azure, Kubernetes, Docker |
-| `series` | String | `"Production GCP Security"` | Optional ordered collection name; omit for a standalone article |
-| `seriesOrder` | Number | `1` | Part number in the series; only valid when `series` is set |
+| `playlist` | String | `"GCP Security Essentials"` | Optional ordered collection for a GCP, AWS, or Kubernetes article |
+| `playlistOrder` | Number | `1` | Positive position in the playlist; only valid when `playlist` is set |
+| `playlistOnly` | Boolean | `true` | Optional. Keep the article out of default feeds while retaining search, direct URL, sitemap, and playlist discovery |
 | `difficulty` | String | `"Beginner"` | Beginner, Intermediate, or Advanced |
 | `tools` | Array | `["GitHub Actions"]` | Tools covered in the article |
 | `image` | String | `"/og-default.jpg"` | JPEG, PNG, or WebP social image; local file must exist |
@@ -111,14 +112,17 @@ tools: ["Jenkins", "GitHub Actions"]
 
 Tags are the primary reader-facing discovery mechanism on `/blog`. If a post has `tags: ["GCP", "Security", "Cloud Armor"]`, it appears as a normal article card in all three tag feeds. Cloud Armor is a GCP security service: use `category: "Security"`, `platform: "GCP"`, and `Cloud Armor` as a tool/tag.
 
-Articles are standalone by default. Add `series` plus `seriesOrder` only when the article should also belong to a separately published ordered collection at `/series/<series-slug>`:
+Articles are standalone by default. Add `playlist` plus `playlistOrder` only when a GCP, AWS, or Kubernetes article should also belong to a separately published ordered collection at `/playlists/<playlist-slug>`:
 
 ```yaml
-series: "Production GCP Security"
-seriesOrder: 1
+platform: "GCP"
+tags: ["GCP", "Security", "Cloud Armor"]
+playlist: "GCP Security Essentials"
+playlistOrder: 1
+playlistOnly: true
 ```
 
-Series membership never changes how the article appears in a tag feed. In the local `/admin` authoring tool, turn on **Add to a series** explicitly before entering these fields.
+Normal playlist membership does not change how an article appears in a tag feed or search result. Set `playlistOnly: true` only for a lesson that should be discovered through its playlist or keyword search instead of the default and tag article feeds. Playlist-only articles keep their independent URL, remain in the sitemap, and are excluded from the homepage, RSS, and ordinary recommendations. Playlist posts must include the matching `GCP`, `AWS`, or `Kubernetes` platform tag. In the local `/admin` authoring tool, turn on **Add to a playlist** explicitly before entering these fields.
 
 The blog displays tags in this order: core topics, platforms, tools and services, then development. Keep difficulty values like `Beginner` in the `difficulty` field, not in `tags`.
 

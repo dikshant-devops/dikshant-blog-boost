@@ -4,7 +4,7 @@ import { ReactNode, useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, ArrowLeft, Check, Copy, Layers } from "lucide-react";
+import { Calendar, Clock, ArrowLeft, Check, Copy, ListVideo, UserRound } from "lucide-react";
 import { type BlogPost } from "@/types/blog";
 import { loadMarkdownPost, loadMarkdownPosts } from "@/utils/markdownLoader";
 import { useSEO, useArticleStructuredData } from "@/hooks/useSEO";
@@ -100,13 +100,14 @@ const BlogPost = () => {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [allPosts, setAllPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [readingProgress, setReadingProgress] = useState(0);
 
   // SEO optimization - call hooks consistently
   useSEO(post ? {
     title: articlePageTitle(post.title),
     description: post.excerpt,
     keywords: post.tags.join(', '),
-    author: post.author || 'Dikshant Sharma',
+    author: post.author || 'Dikshant Rai',
     type: 'article',
     url: post.canonicalUrl || `${window.location.origin}/blog/${id}`,
     image: post.image,
@@ -119,7 +120,7 @@ const BlogPost = () => {
   useArticleStructuredData(post ? {
     title: post.title,
     description: post.excerpt,
-    author: post.author || 'Dikshant Sharma',
+    author: post.author || 'Dikshant Rai',
     datePublished: new Date(post.date).toISOString(),
     dateModified: post.updatedDate ? new Date(post.updatedDate).toISOString() : undefined,
     image: post.image,
@@ -131,7 +132,10 @@ const BlogPost = () => {
   // Memoize related posts by tag relevance
   const relatedPosts = useMemo(() => {
     if (!post || allPosts.length === 0) return [];
-    const others = allPosts.filter(p => p.id !== post.id);
+    const others = allPosts.filter(p =>
+      p.id !== post.id
+      && (!p.playlistOnly || (post.playlistOnly && p.playlistSlug === post.playlistSlug))
+    );
     // Score by number of shared tags
     const scored = others.map(p => ({
       post: p,
@@ -246,6 +250,24 @@ const BlogPost = () => {
     fetchPost();
   }, [id]);
 
+  useEffect(() => {
+    if (!post) return;
+    const updateProgress = () => {
+      const article = document.getElementById("article-content");
+      if (!article) return;
+      const start = article.offsetTop;
+      const distance = Math.max(article.offsetHeight - window.innerHeight, 1);
+      setReadingProgress(Math.min(100, Math.max(0, ((window.scrollY - start) / distance) * 100)));
+    };
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
+    return () => {
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
+    };
+  }, [post]);
+
   // Early returns AFTER all hooks
   if (loading) {
     return (
@@ -283,9 +305,10 @@ const BlogPost = () => {
 
   return (
     <>
-      <article className="container mx-auto py-8 px-4 max-w-6xl">
+      <div className="fixed left-0 top-16 z-40 h-0.5 bg-primary transition-[width] duration-150" style={{ width: `${readingProgress}%` }} aria-hidden="true" />
+      <article id="article-content" className="content-shell max-w-6xl py-8 md:py-12">
         {/* Back to Blog */}
-        <Button variant="ghost" asChild className="mb-6">
+        <Button variant="ghost" asChild className="mb-8 -ml-3">
           <Link to="/blog" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Blog
@@ -293,30 +316,30 @@ const BlogPost = () => {
         </Button>
 
         {/* Article Header */}
-        <header className="mb-8">
-          <div className="flex flex-wrap gap-2 mb-4">
+        <header className="mb-10 max-w-4xl border-b pb-10">
+          <p className="eyebrow mb-4">{post.category || "Technical field note"}</p>
+          <div className="mb-5 flex flex-wrap gap-2">
             {post.category && (
-              <Badge variant="outline">
-                {post.category}
-              </Badge>
+              <Link to={`/blog?tag=${encodeURIComponent(post.category)}`}><Badge variant="outline">{post.category}</Badge></Link>
             )}
             {post.platform && (
-              <Badge variant="outline">
-                {post.platform}
-              </Badge>
+              <Link to={`/blog?tag=${encodeURIComponent(post.platform)}`}><Badge variant="outline">{post.platform}</Badge></Link>
             )}
             {displayTags.map((tag) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-              </Badge>
+              <Link key={tag} to={`/blog?tag=${encodeURIComponent(tag)}`}><Badge variant="secondary">{tag}</Badge></Link>
             ))}
           </div>
           
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
+          <h1 className="text-3xl font-bold leading-tight md:text-5xl lg:text-6xl">
             {post.title}
           </h1>
-          
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
+          <p className="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">{post.excerpt}</p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-4 w-4" />
+              <span>{post.author || "Dikshant Rai"}</span>
+            </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               <span>{formattedDate}</span>
@@ -325,24 +348,24 @@ const BlogPost = () => {
               <Clock className="h-4 w-4" />
               <span>{post.readTime}</span>
             </div>
-            {post.series && (
+            {(post.playlist || post.series) && (
               <Link
-                to={`/series/${post.seriesSlug}`}
+                to={`/playlists/${post.playlistSlug || post.seriesSlug}`}
                 className="flex items-center gap-2 hover:text-primary"
               >
-                <Layers className="h-4 w-4" />
+                <ListVideo className="h-4 w-4" />
                 <span>
-                  {post.series}{typeof post.seriesOrder === "number" ? ` · Part ${post.seriesOrder}` : ""}
+                  {post.playlist || post.series}{typeof (post.playlistOrder ?? post.seriesOrder) === "number" ? ` · Item ${post.playlistOrder ?? post.seriesOrder}` : ""}
                 </span>
               </Link>
             )}
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_17rem]">
           <div>
             {/* Article Content - Code-split with Suspense */}
-            <div className="prose prose-lg max-w-none dark:prose-invert">
+            <div className="article-prose prose prose-lg max-w-none dark:prose-invert prose-pre:bg-transparent prose-pre:p-0">
               <Suspense fallback={<div className="text-center py-8 text-muted-foreground">Loading content...</div>}>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -354,19 +377,20 @@ const BlogPost = () => {
             </div>
 
             {/* Newsletter Signup */}
-            <div className="mt-12 pt-8 border-t">
+            <div className="mt-14 border-t pt-8">
               <NewsletterSignup variant="inline" className="max-w-2xl mx-auto" />
             </div>
 
             {/* Related Posts */}
-            <div className="mt-12 pt-8 border-t">
-              <h3 className="text-2xl font-semibold mb-6">More Articles</h3>
+            <div className="mt-14 border-t pt-8">
+              <p className="eyebrow">Keep reading</p>
+              <h3 className="mb-6 mt-2 text-2xl font-semibold">Related field notes</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {relatedPosts.map((relatedPost) => (
                     <Link
                       key={relatedPost.id}
                       to={`/blog/${relatedPost.id}`}
-                      className="block p-4 border rounded-lg hover:shadow-card transition-all"
+                      className="block rounded-md border bg-card p-5 transition-colors hover:border-primary"
                     >
                       <h4 className="font-semibold mb-2 hover:text-primary transition-colors">
                         {relatedPost.title}
@@ -380,11 +404,11 @@ const BlogPost = () => {
             </div>
           </div>
 
-          <aside className="order-first lg:order-none">
+          <aside>
             <div className="sticky top-24 space-y-6">
               {post.headings && post.headings.length > 0 && (
-                <div className="rounded-lg border bg-card p-4">
-                  <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-md border bg-card p-4">
+                  <h2 className="mb-3 text-xs font-semibold uppercase text-muted-foreground" style={{ letterSpacing: "0.1em" }}>
                     On This Page
                   </h2>
                   <nav className="space-y-2">

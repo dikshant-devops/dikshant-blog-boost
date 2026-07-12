@@ -15,9 +15,9 @@ describe('NewsletterSignup', () => {
   });
 
   describe('default variant', () => {
-    it('renders card with "Stay Updated" title', () => {
+    it('renders the publication signup title', () => {
       render(<NewsletterSignup />);
-      expect(screen.getByText('Stay Updated')).toBeInTheDocument();
+      expect(screen.getByText('Get new field notes')).toBeInTheDocument();
     });
 
     it('renders email input and subscribe button', () => {
@@ -33,14 +33,14 @@ describe('NewsletterSignup', () => {
   });
 
   describe('inline variant', () => {
-    it('renders inline layout with different title', () => {
+    it('renders inline layout without duplicating a page title', () => {
       render(<NewsletterSignup variant="inline" />);
-      expect(screen.getByText('Subscribe to Our Newsletter')).toBeInTheDocument();
+      expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     });
 
     it('renders inline email input', () => {
       render(<NewsletterSignup variant="inline" />);
-      expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
       expect(screen.getByText('Subscribe')).toBeInTheDocument();
     });
   });
@@ -152,7 +152,7 @@ describe('NewsletterSignup', () => {
       fireEvent.change(input, { target: { value: 'user@test.com' } });
       fireEvent.submit(input.closest('form')!);
 
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.getByText('Subscribing...')).toBeInTheDocument();
 
       resolveRequest!({
         ok: true,

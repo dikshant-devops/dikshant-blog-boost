@@ -56,7 +56,7 @@ Start the article introduction here. The frontmatter title is rendered as the pa
 
 Tags drive public discovery. For example, `tags: ["GCP", "Security", "Cloud Armor"]` makes the same standalone article appear in each matching tag feed. Every tag feed is a normal date-ordered article list.
 
-Series are separate and optional. Add `series` and `seriesOrder` only when an article is intentionally part of an ordered collection. Series are published at `/series/<series-slug>` and never replace or partition tag feeds.
+Playlists are separate and optional for GCP, AWS, and Kubernetes posts. Add `playlist` and `playlistOrder` only when an article is intentionally part of an ordered collection. Playlists are published at `/playlists/<playlist-slug>` and do not partition tag feeds. An explicitly marked `playlistOnly: true` lesson remains searchable and independently addressable while staying out of default feeds, homepage recommendations, and RSS.
 
 ## 🛠️ Development Commands
 
@@ -116,7 +116,7 @@ npm run test:coverage
 
 ### Features
 - **Markdown Support** - Full GitHub Flavored Markdown
-- **Tags and Series** - Uniform tag feeds plus separate, explicitly assigned ordered series
+- **Tags and Playlists** - Uniform searchable article feeds plus separate, explicitly assigned ordered playlists
 - **SEO Optimized** - Sitemap, RSS, canonical URLs, Open Graph, and per-post structured data shells
 - **Dark/Light Mode** - Theme switching with persistence
 - **Performance** - Build-time content index, cache-first loading, code-splitting, memoization

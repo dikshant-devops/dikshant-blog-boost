@@ -120,6 +120,22 @@ describe('BlogPost', () => {
     expect(screen.getByText('5 min read')).toBeInTheDocument();
   });
 
+  it('links optional playlist membership to the canonical playlist page', async () => {
+    const playlistPost = {
+      ...mockPost,
+      playlist: 'Kubernetes Foundations',
+      playlistSlug: 'kubernetes-foundations',
+      playlistOrder: 2,
+    };
+    (loadMarkdownPost as any).mockResolvedValue(playlistPost);
+    (loadMarkdownPosts as any).mockResolvedValue([playlistPost]);
+
+    renderBlogPost();
+
+    const playlistLink = await screen.findByRole('link', { name: /Kubernetes Foundations · Item 2/ });
+    expect(playlistLink).toHaveAttribute('href', '/playlists/kubernetes-foundations');
+  });
+
   it('redirects to /blog if post not found', async () => {
     (loadMarkdownPost as any).mockResolvedValue(null);
     (loadMarkdownPosts as any).mockResolvedValue([]);
@@ -144,7 +160,7 @@ describe('BlogPost', () => {
     // Docker Guide shares "Docker" tag, Kubernetes Intro shares "DevOps" tag
     // Both share 1 tag, but Docker Guide should appear (same shared count, sorted by date)
     // Git Basics shares 0 tags — should NOT appear
-    const relatedSection = screen.getByText('More Articles').parentElement;
+    const relatedSection = screen.getByText('Related field notes').parentElement;
     expect(relatedSection).toBeInTheDocument();
 
     // Git Basics should not be in related posts since it shares no tags with the current post

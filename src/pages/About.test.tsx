@@ -10,23 +10,32 @@ function renderAbout() {
 describe('About Page', () => {
   it('renders page heading with name', () => {
     renderAbout();
-    expect(screen.getByText('Dikshant')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Dikshant Rai' })).toBeInTheDocument();
+    expect(screen.getByText('Sr Site Reliability Engineer')).toBeInTheDocument();
+    expect(screen.getByText(/I document the implementation details/)).toBeInTheDocument();
   });
 
-  it('renders all achievement stats', () => {
+  it('renders the optimized author portrait with stable dimensions', () => {
     renderAbout();
-    // 50+ appears twice (Students Taught + Tutorials Created)
-    expect(screen.getAllByText('50+').length).toBe(2);
-    expect(screen.getByText('6+')).toBeInTheDocument();
-    expect(screen.getByText('95%')).toBeInTheDocument();
+    const portrait = screen.getByRole('img', { name: 'Dikshant Rai, Sr Site Reliability Engineer' });
+
+    expect(portrait).toHaveAttribute('src', '/images/about/dikshant-rai.jpg');
+    expect(portrait).toHaveAttribute('width', '868');
+    expect(portrait).toHaveAttribute('height', '1085');
+    expect(portrait).toHaveAttribute('fetchpriority', 'high');
   });
 
-  it('renders achievement labels', () => {
+  it('does not render unverifiable vanity metrics', () => {
     renderAbout();
-    expect(screen.getByText('Students Taught')).toBeInTheDocument();
-    expect(screen.getByText('Tutorials Created')).toBeInTheDocument();
-    expect(screen.getByText('Years Experience')).toBeInTheDocument();
-    expect(screen.getByText('Student Success Rate')).toBeInTheDocument();
+    expect(screen.queryByText('95%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Students Taught')).not.toBeInTheDocument();
+  });
+
+  it('renders writing principles', () => {
+    renderAbout();
+    expect(screen.getByText('Production context')).toBeInTheDocument();
+    expect(screen.getByText('Concrete detail')).toBeInTheDocument();
+    expect(screen.getByText('Reasoned choices')).toBeInTheDocument();
   });
 
   it('renders all skills badges', () => {
@@ -37,24 +46,23 @@ describe('About Page', () => {
     });
   });
 
-  it('renders mission and background cards', () => {
+  it('renders the technical focus', () => {
     renderAbout();
-    expect(screen.getByText('My Mission')).toBeInTheDocument();
-    expect(screen.getByText('My Background')).toBeInTheDocument();
+    expect(screen.getByText('Tools are context, not the lesson')).toBeInTheDocument();
   });
 
   it('renders CTA section with links', () => {
     renderAbout();
-    expect(screen.getByText('Explore Tutorials')).toBeInTheDocument();
-    expect(screen.getByText('Connect with Me')).toBeInTheDocument();
+    expect(screen.getByText('Read the articles')).toBeInTheDocument();
+    expect(screen.getByText('Start a conversation')).toBeInTheDocument();
   });
 
   it('CTA links point to correct routes', () => {
     renderAbout();
-    const exploreLink = screen.getByText('Explore Tutorials').closest('a');
+    const exploreLink = screen.getByText('Read the articles').closest('a');
     expect(exploreLink?.getAttribute('href')).toBe('/blog');
 
-    const connectLink = screen.getByText('Connect with Me').closest('a');
+    const connectLink = screen.getByText('Start a conversation').closest('a');
     expect(connectLink?.getAttribute('href')).toBe('/connect');
   });
 });

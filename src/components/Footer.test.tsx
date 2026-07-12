@@ -48,9 +48,9 @@ describe('Footer', () => {
     expect(screen.getByText(new RegExp(year))).toBeInTheDocument();
   });
 
-  it('uses sm:grid-cols-2 for tablet breakpoint', () => {
+  it('uses an editorial multi-column layout on desktop', () => {
     renderFooter();
     const grid = document.querySelector('.grid');
-    expect(grid?.className).toContain('sm:grid-cols-2');
+    expect(grid?.className).toContain('md:grid-cols-');
   });
 });

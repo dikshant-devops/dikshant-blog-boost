@@ -45,8 +45,10 @@ export async function verifyBuild() {
   assert(posts.length > 0, 'Blog listing index is empty');
   assert(posts.every(post => !Object.hasOwn(post, 'searchText')), 'Listing index contains full article search text');
   assert(posts.every(post => !Object.hasOwn(post, 'headings')), 'Listing index contains article heading details');
+  assert(posts.every(post => !Object.hasOwn(post, 'series')), 'Listing index contains deprecated series metadata');
   assert(searchIndex.length === posts.length, 'Search index and listing index have different post counts');
   assert(!/^\/\*\s+/m.test(redirects), 'Catch-all 200 rewrite would create soft 404s');
+  assert(redirects.includes('/series/:slug /playlists/:slug 301'), 'Legacy series redirect is missing');
 
   const listingBytes = (await stat(join(PUBLIC, 'blog-posts-index.json'))).size;
   const searchBytes = (await stat(join(PUBLIC, 'blog-search-index.json'))).size;
@@ -55,13 +57,17 @@ export async function verifyBuild() {
 
   const socialImage = join(PUBLIC, 'og-default.jpg');
   assert((await stat(socialImage)).size <= 300_000, 'Default social image exceeds 300 KB');
+  const homepageHero = join(PUBLIC, 'images', 'site', 'devops-operations-hero.jpg');
+  assert((await stat(homepageHero)).size <= 300_000, 'Homepage hero image exceeds 300 KB');
+  const authorPortrait = join(PUBLIC, 'images', 'about', 'dikshant-rai.jpg');
+  assert((await stat(authorPortrait)).size <= 250_000, 'Author portrait exceeds 250 KB');
 
   await verifyHtmlFile(
     join(DIST, 'index.html'),
     'data-prerendered="static-page"',
     'https://techwithdikshant.com'
   );
-  await verifyHtmlFile(
+  const blogListingHtml = await verifyHtmlFile(
     join(DIST, 'blog', 'index.html'),
     'data-prerendered="blog-listing"',
     'https://techwithdikshant.com/blog'
@@ -92,23 +98,29 @@ export async function verifyBuild() {
       : `https://techwithdikshant.com${post.image}`;
     assert(html.includes(socialUrl), `${post.id}: social image missing`);
     assert(sitemap.includes(`<loc>${canonical}</loc>`), `${post.id}: missing from sitemap`);
-    assert(rss.includes(`<link>${canonical}</link>`), `${post.id}: missing from RSS`);
+    if (post.playlistOnly) {
+      assert(!rss.includes(`<link>${canonical}</link>`), `${post.id}: playlist-only article leaked into RSS`);
+      assert(!blogListingHtml.includes(`href="/blog/${post.id}"`), `${post.id}: playlist-only article leaked into the default blog listing`);
+      assert(post.playlist && post.playlistSlug, `${post.id}: playlist-only article has no playlist`);
+    } else {
+      assert(rss.includes(`<link>${canonical}</link>`), `${post.id}: missing from RSS`);
+    }
 
     const ids = Array.from(html.matchAll(/\sid="([^"]+)"/g), match => match[1]);
     assert(new Set(ids).size === ids.length, `${post.id}: duplicate HTML IDs found`);
   }
 
-  const seriesSlugs = [...new Set(posts.map(post => post.seriesSlug).filter(Boolean))];
-  for (const seriesSlug of seriesSlugs) {
-    const canonical = `https://techwithdikshant.com/series/${seriesSlug}`;
-    const routePath = join(DIST, 'series', seriesSlug, 'index.html');
-    const flatPath = join(DIST, 'series', `${seriesSlug}.html`);
-    const html = await verifyHtmlFile(routePath, 'data-prerendered="series"', canonical);
+  const playlistSlugs = [...new Set(posts.map(post => post.playlistSlug).filter(Boolean))];
+  for (const playlistSlug of playlistSlugs) {
+    const canonical = `https://techwithdikshant.com/playlists/${playlistSlug}`;
+    const routePath = join(DIST, 'playlists', playlistSlug, 'index.html');
+    const flatPath = join(DIST, 'playlists', `${playlistSlug}.html`);
+    const html = await verifyHtmlFile(routePath, 'data-prerendered="playlist"', canonical);
     const flatHtml = await readFile(flatPath, 'utf8');
 
-    assert(flatHtml === html, `${seriesSlug}: clean and trailing-slash series output differs`);
-    assert(count(html, /data-structured-data="series"/g) === 1, `${seriesSlug}: expected one series schema`);
-    assert(sitemap.includes(`<loc>${canonical}</loc>`), `${seriesSlug}: missing from sitemap`);
+    assert(flatHtml === html, `${playlistSlug}: clean and trailing-slash playlist output differs`);
+    assert(count(html, /data-structured-data="playlist"/g) === 1, `${playlistSlug}: expected one playlist schema`);
+    assert(sitemap.includes(`<loc>${canonical}</loc>`), `${playlistSlug}: missing from sitemap`);
   }
 
   const assetFiles = (await readdir(join(DIST, 'assets'))).filter(file => file.endsWith('.js') || file.endsWith('.css'));
@@ -141,7 +153,7 @@ export async function verifyBuild() {
     assert(functionRoutes.include.includes(route), `Function route missing from _routes.json: ${route}`);
   }
 
-  console.log(`Verified ${posts.length} articles, ${seriesSlugs.length} series, ${assetFiles.length} assets, and ${totalJsGzip} bytes of gzipped JavaScript.`);
+  console.log(`Verified ${posts.length} articles, ${playlistSlugs.length} playlists, ${assetFiles.length} assets, and ${totalJsGzip} bytes of gzipped JavaScript.`);
 }
 
 const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;

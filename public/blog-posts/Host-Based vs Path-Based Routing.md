@@ -3,9 +3,11 @@ title: "Host-Based vs Path-Based Routing in Load Balancers"
 excerpt: "Compare host-based and path-based routing patterns for modern load balancers, including use cases, diagrams, and AWS ALB examples."
 date: "2025-01-06"
 updatedDate: "2025-01-06"
-author: "Dikshant Sharma"
+author: "Dikshant Rai"
 category: "Networking"
 platform: "AWS"
+playlist: "AWS Load Balancing"
+playlistOrder: 1
 difficulty: "Beginner"
 image: "/og-default.jpg"
 tags: ["AWS", "Load Balancer", "Networking", "DevOps"]

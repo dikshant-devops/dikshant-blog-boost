@@ -48,9 +48,9 @@ const mockPosts: BlogPost[] = [
     tags: ['GCP', 'Cloud Armor', 'Security'],
     category: 'Security',
     platform: 'GCP',
-    series: 'GCP Day by Day',
-    seriesSlug: 'gcp-day-by-day',
-    seriesOrder: 1,
+    playlist: 'GCP Day by Day',
+    playlistSlug: 'gcp-day-by-day',
+    playlistOrder: 1,
     content: 'GCP content here'
   },
   {
@@ -63,6 +63,21 @@ const mockPosts: BlogPost[] = [
     category: 'Security',
     platform: 'GCP',
     content: 'IAM content here'
+  },
+  {
+    id: 'gcp-iam-playlist-guide',
+    title: 'GCP IAM Playlist Guide',
+    excerpt: 'A playlist-only identity and access management guide',
+    date: '2024-01-17',
+    readTime: '6 min read',
+    tags: ['GCP', 'Security'],
+    category: 'Security',
+    platform: 'GCP',
+    playlist: 'GCP Day by Day',
+    playlistSlug: 'gcp-day-by-day',
+    playlistOrder: 2,
+    playlistOnly: true,
+    content: 'Service account bindings and least privilege'
   }
 ];
 
@@ -79,7 +94,8 @@ describe('Blog Page', () => {
       'kubernetes-post': 'Kubernetes content here pod scheduling',
       'cicd-post': 'CI/CD content here release automation',
       'gcp-cloud-armor': 'GCP content here edge policy',
-      'gcp-iam-notes': 'IAM content here identity policy'
+      'gcp-iam-notes': 'IAM content here identity policy',
+      'gcp-iam-playlist-guide': 'Service account bindings and least privilege'
     });
   });
 
@@ -104,9 +120,44 @@ describe('Blog Page', () => {
     renderWithRouter(<Blog />);
 
     await waitFor(() => {
-      const searchInput = screen.getByPlaceholderText(/search by topic/i);
+      const searchInput = screen.getByPlaceholderText(/search commands/i);
       expect(searchInput).toBeInTheDocument();
     });
+  });
+
+  it('keeps mobile topic groups compact until requested', async () => {
+    renderWithRouter(<Blog />);
+
+    await waitFor(() => expect(screen.getByText('Getting Started with Docker')).toBeInTheDocument());
+
+    const toggle = screen.getByRole('button', { name: /browse topics/i });
+    const groups = document.getElementById('topic-groups');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(groups).toHaveClass('hidden');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(groups).toHaveClass('grid');
+  });
+
+  it('renders grouped taxonomy as readable navigation with result counts', async () => {
+    renderWithRouter(<Blog />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Browse by area' })).toBeInTheDocument());
+
+    expect(screen.getByText('Engineering concerns and operating practices')).toBeInTheDocument();
+    expect(screen.getByText('Cloud and container runtime ecosystems')).toBeInTheDocument();
+    expect(screen.getByText('Products used to build and operate systems')).toBeInTheDocument();
+    expect(screen.queryByText('Source control and daily engineering workflows')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'GCP' })).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: 'Kubernetes' })).toHaveTextContent('1');
+  });
+
+  it('exposes the selected taxonomy filter through aria-pressed', async () => {
+    renderWithRouter(<Blog />, ['/blog?tag=GCP']);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'GCP' })).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByRole('button', { name: 'Kubernetes' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('should filter posts by search term', async () => {
@@ -116,7 +167,7 @@ describe('Blog Page', () => {
       expect(screen.getByText('Getting Started with Docker')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search by topic/i);
+    const searchInput = screen.getByPlaceholderText(/search commands/i);
     fireEvent.change(searchInput, { target: { value: 'Docker' } });
 
     await waitFor(() => {
@@ -132,7 +183,7 @@ describe('Blog Page', () => {
     await waitFor(() => expect(screen.getByText('Getting Started with Docker')).toBeInTheDocument());
     expect(markdownLoader.loadBlogSearchIndex).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByPlaceholderText(/search by topic/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search commands/i), {
       target: { value: 'pod scheduling' }
     });
 
@@ -150,13 +201,7 @@ describe('Blog Page', () => {
       expect(screen.getByText('Getting Started with Docker')).toBeInTheDocument();
     });
 
-    // Click on Kubernetes tag
-    const tags = screen.getAllByText('Kubernetes');
-    // Find the badge (not the one in the card)
-    const kubernetesBadge = tags.find(tag => tag.closest('.cursor-pointer'));
-    if (kubernetesBadge) {
-      fireEvent.click(kubernetesBadge);
-    }
+    fireEvent.click(screen.getByRole('button', { name: 'Kubernetes' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Getting Started with Docker')).not.toBeInTheDocument();
@@ -164,57 +209,85 @@ describe('Blog Page', () => {
     });
   });
 
-  it('shows series and standalone posts uniformly in a selected tag feed', async () => {
+  it('shows playlist and standalone posts uniformly in the default tag feed', async () => {
     renderWithRouter(<Blog />);
 
     await waitFor(() => {
       expect(screen.getByText('GCP Cloud Armor Day 1')).toBeInTheDocument();
     });
 
-    const gcpTags = screen.getAllByText('GCP');
-    const gcpBadge = gcpTags.find(tag => tag.closest('.cursor-pointer'));
-    if (gcpBadge) {
-      fireEvent.click(gcpBadge);
-    }
+    fireEvent.click(screen.getByRole('button', { name: 'GCP' }));
 
     await waitFor(() => {
-      expect(screen.getByText('GCP Articles')).toBeInTheDocument();
-      expect(screen.getByText('Selected Tag')).toBeInTheDocument();
+      expect(screen.getByText('GCP articles')).toBeInTheDocument();
+      expect(screen.getByText('Selected topic')).toBeInTheDocument();
       expect(screen.getByText('GCP Cloud Armor Day 1')).toBeInTheDocument();
       expect(screen.getByText('GCP IAM Notes')).toBeInTheDocument();
-      expect(screen.queryByText('Individual Articles')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('tag-series-playlists')).not.toBeInTheDocument();
+      expect(screen.queryByText('GCP IAM Playlist Guide')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Articles 2/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Playlists 1/ })).toBeInTheDocument();
       expect(screen.queryByText('Getting Started with Docker')).not.toBeInTheDocument();
     });
   });
 
-  it('discovers series separately from the article feed', async () => {
+  it('discovers playlists separately from the article feed', async () => {
     renderWithRouter(<Blog />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Series' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /GCP Day by Day/i })).toHaveAttribute('href', '/series/gcp-day-by-day');
+      expect(screen.getByRole('heading', { name: 'Playlists' })).toBeInTheDocument();
+      expect(screen.getByText('GCP Day by Day')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open playlist' })).toHaveAttribute('href', '/playlists/gcp-day-by-day');
       expect(screen.getByText('GCP IAM Notes')).toBeInTheDocument();
     });
   });
 
-  it('should show all posts when "All" tag is selected', async () => {
+  it('shows only explicit playlist collections in the platform playlist view', async () => {
+    renderWithRouter(<Blog />, ['/blog?tag=GCP&view=playlists']);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'GCP playlists' })).toBeInTheDocument();
+      expect(screen.getByText('GCP Day by Day')).toBeInTheDocument();
+      expect(screen.getByText(/01\. GCP Cloud Armor Day 1/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open playlist' })).toHaveAttribute('href', '/playlists/gcp-day-by-day');
+      expect(screen.queryByText('GCP Cloud Armor Day 1')).not.toBeInTheDocument();
+      expect(screen.queryByText('GCP IAM Notes')).not.toBeInTheDocument();
+    });
+  });
+
+  it('switches from playlists to independently searchable article results', async () => {
+    renderWithRouter(<Blog />, ['/blog?tag=GCP&view=playlists']);
+
+    await waitFor(() => expect(screen.getByText('GCP Day by Day')).toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText(/search commands/i), { target: { value: 'edge policy' } });
+
+    await waitFor(() => {
+      expect(markdownLoader.loadBlogSearchIndex).toHaveBeenCalled();
+      expect(screen.getByText('GCP Cloud Armor Day 1')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'GCP playlists' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('finds playlist-only articles through keyword search without adding them to the default feed', async () => {
+    renderWithRouter(<Blog />, ['/blog?tag=GCP']);
+
+    await waitFor(() => expect(screen.queryByText('GCP IAM Playlist Guide')).not.toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText(/search commands/i), { target: { value: 'service account bindings' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('GCP IAM Playlist Guide')).toBeInTheDocument();
+      expect(screen.queryByText('GCP IAM Notes')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should show all posts after filters are cleared', async () => {
     renderWithRouter(<Blog />);
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started with Docker')).toBeInTheDocument();
     });
 
-    // Click a specific tag first
-    const dockerTags = screen.getAllByText('Docker');
-    const dockerBadge = dockerTags.find(tag => tag.closest('.cursor-pointer'));
-    if (dockerBadge) {
-      fireEvent.click(dockerBadge);
-    }
-
-    // Now click "All Tags" badge
-    const allBadge = screen.getByText('All Tags');
-    fireEvent.click(allBadge);
+    fireEvent.click(screen.getByRole('button', { name: 'Docker' }));
+    fireEvent.click(screen.getByRole('button', { name: /clear filters/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started with Docker')).toBeInTheDocument();
@@ -232,6 +305,25 @@ describe('Blog Page', () => {
     });
   });
 
+  it('renders large article feeds progressively in groups of twelve', async () => {
+    const manyPosts: BlogPost[] = Array.from({ length: 15 }, (_, index) => ({
+      id: `article-${index + 1}`,
+      title: `Scalable Article ${index + 1}`,
+      excerpt: `Operational article ${index + 1}`,
+      date: `2024-01-${String(15 - index).padStart(2, '0')}`,
+      readTime: '5 min read',
+      tags: ['DevOps'],
+      content: '',
+    }));
+    vi.mocked(markdownLoader.loadMarkdownPosts).mockResolvedValue(manyPosts);
+    renderWithRouter(<Blog />);
+
+    await waitFor(() => expect(screen.getByText('Scalable Article 1')).toBeInTheDocument());
+    expect(screen.queryByText('Scalable Article 13')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Load 12 more articles' }));
+    expect(screen.getByText('Scalable Article 15')).toBeInTheDocument();
+  });
+
   it('should show "no articles found" when search returns no results', async () => {
     renderWithRouter(<Blog />);
 
@@ -239,20 +331,18 @@ describe('Blog Page', () => {
       expect(screen.getByText('Getting Started with Docker')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search by topic/i);
+    const searchInput = screen.getByPlaceholderText(/search commands/i);
     fireEvent.change(searchInput, { target: { value: 'NonExistentTopic' } });
 
     await waitFor(() => {
-      expect(screen.getByText(/no articles found matching your criteria/i)).toBeInTheDocument();
+      expect(screen.getByText(/no matching articles/i)).toBeInTheDocument();
     });
   });
 
   it('should display page title and description', () => {
     renderWithRouter(<Blog />);
 
-    // Use getAllByText since "DevOps" and "Blog" appear in multiple places (title + tags)
-    expect(screen.getAllByText(/DevOps/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Blog/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'DevOps field notes' })).toBeInTheDocument();
   });
 
   it('should use memoized handlers (performance optimization)', async () => {
@@ -266,7 +356,7 @@ describe('Blog Page', () => {
     rerender(<MemoryRouter><Blog /></MemoryRouter>);
 
     // Functionality should still work
-    const searchInput = screen.getByPlaceholderText(/search by topic/i);
+    const searchInput = screen.getByPlaceholderText(/search commands/i);
     expect(searchInput).toBeInTheDocument();
   });
 

@@ -65,9 +65,24 @@ describe('tag ordering', () => {
 
   it('groups visible tags by reader-facing sections', () => {
     expect(getOrderedTagGroups(['Docker', 'GCP', 'DevOps', 'GitHub Actions', 'Cloud Armor'])).toEqual([
-      { title: 'Core Topics', tags: ['DevOps'] },
-      { title: 'Platforms', tags: ['GCP', 'Docker'] },
-      { title: 'Tools & Services', tags: ['Cloud Armor', 'GitHub Actions'] },
+      {
+        key: 'core',
+        title: 'Core Topics',
+        description: 'Engineering concerns and operating practices',
+        tags: ['DevOps'],
+      },
+      {
+        key: 'platforms',
+        title: 'Platforms',
+        description: 'Cloud and container runtime ecosystems',
+        tags: ['GCP', 'Docker'],
+      },
+      {
+        key: 'tools',
+        title: 'Tools & Services',
+        description: 'Products used to build and operate systems',
+        tags: ['Cloud Armor', 'GitHub Actions'],
+      },
     ]);
   });
 });

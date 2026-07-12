@@ -17,6 +17,8 @@ export const CATEGORIES = [
 
 export const PLATFORMS = ['GCP', 'AWS', 'Azure', 'Kubernetes', 'Docker'];
 
+export const PLAYLIST_PLATFORMS = ['GCP', 'AWS', 'Kubernetes'];
+
 export const DIFFICULTIES = ['Beginner', 'Intermediate', 'Advanced'];
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -206,18 +208,38 @@ function normalizeDate(value, field, filename, required = false) {
   return normalized;
 }
 
-function normalizeSeriesOrder(value, series, filename) {
+function normalizePlaylistOrder(value, playlist, filename) {
   if (value === undefined || value === null || value === '') {
-    if (series) throw new Error(`${filename}: seriesOrder is required when series is set`);
+    if (playlist) throw new Error(`${filename}: playlistOrder is required when playlist is set`);
     return undefined;
   }
-  if (!series) throw new Error(`${filename}: seriesOrder requires a non-empty series`);
+  if (!playlist) throw new Error(`${filename}: playlistOrder requires a non-empty playlist`);
 
   const normalized = Number(value);
   if (!Number.isInteger(normalized) || normalized < 1) {
-    throw new Error(`${filename}: seriesOrder must be a positive integer`);
+    throw new Error(`${filename}: playlistOrder must be a positive integer`);
   }
   return normalized;
+}
+
+function normalizePlaylist(data, filename) {
+  const playlist = String(data.playlist ?? '').trim();
+  const legacySeries = String(data.series ?? '').trim();
+  if (playlist && legacySeries && playlist !== legacySeries) {
+    throw new Error(`${filename}: playlist and legacy series values must match when both are supplied`);
+  }
+
+  const name = playlist || legacySeries;
+  const playlistOrder = data.playlistOrder;
+  const legacyOrder = data.seriesOrder ?? data.day;
+  if (playlistOrder !== undefined && legacyOrder !== undefined && Number(playlistOrder) !== Number(legacyOrder)) {
+    throw new Error(`${filename}: playlistOrder and legacy seriesOrder values must match when both are supplied`);
+  }
+
+  return {
+    name,
+    order: normalizePlaylistOrder(playlistOrder ?? legacyOrder, name, filename)
+  };
 }
 
 function normalizeFeatured(value, filename) {
@@ -225,6 +247,18 @@ function normalizeFeatured(value, filename) {
   if (value === true || value === 'true') return true;
   if (value === false || value === 'false') return false;
   throw new Error(`${filename}: featured must be true or false`);
+}
+
+function normalizePlaylistOnly(value, playlist, filename) {
+  if (value === undefined || value === null || value === '') return false;
+  if (value !== true && value !== 'true' && value !== false && value !== 'false') {
+    throw new Error(`${filename}: playlistOnly must be true or false`);
+  }
+  const normalized = value === true || value === 'true';
+  if (normalized && !playlist) {
+    throw new Error(`${filename}: playlistOnly requires playlist membership`);
+  }
+  return normalized;
 }
 
 export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
@@ -256,8 +290,16 @@ export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
 
   const tools = [...new Set(normalizeList(data.tools))];
   const detectedTools = tools.length ? tools : inferTools(detectedTags, content);
-  const series = String(data.series ?? '').trim();
-  const seriesOrder = normalizeSeriesOrder(data.seriesOrder ?? data.day, series, filename);
+  const playlistMetadata = normalizePlaylist(data, filename);
+  const playlist = playlistMetadata.name;
+  const playlistOrder = playlistMetadata.order;
+  const playlistOnly = normalizePlaylistOnly(data.playlistOnly, playlist, filename);
+  if (playlist && !PLAYLIST_PLATFORMS.includes(platform)) {
+    throw new Error(`${filename}: playlists are supported only for GCP, AWS, or Kubernetes posts`);
+  }
+  if (playlist && !detectedTags.includes(platform)) {
+    throw new Error(`${filename}: playlist posts must include the platform tag "${platform}"`);
+  }
   const readStats = estimateReadTime(content);
   const date = normalizeDate(data.date, 'date', filename, true);
   const updatedDate = normalizeDate(data.updatedDate || data.modifiedDate || date, 'updatedDate', filename);
@@ -272,7 +314,7 @@ export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
     throw new Error(`${filename}: unsupported difficulty "${difficulty}"`);
   }
 
-  const author = String(data.author || 'Dikshant Sharma').trim();
+  const author = String(data.author || 'Dikshant Rai').trim();
   if (!author) throw new Error(`${filename}: author is required`);
   if (detectedTags.length < 1 || detectedTags.length > 8) {
     throw new Error(`${filename}: tags must contain between 1 and 8 unique values`);
@@ -313,9 +355,10 @@ export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
     category,
     platform,
     tools: detectedTools,
-    series,
-    seriesSlug: series ? slugify(series) : '',
-    seriesOrder,
+    playlist,
+    playlistSlug: playlist ? slugify(playlist) : '',
+    playlistOrder,
+    playlistOnly,
     difficulty,
     featured: normalizeFeatured(data.featured, filename),
     image,
@@ -327,8 +370,8 @@ export function parseBlogMarkdown(filename, rawContent, siteUrl = SITE_URL) {
 
 export function validateBlogPosts(posts) {
   const slugs = new Map();
-  const seriesPositions = new Map();
-  const seriesNamesBySlug = new Map();
+  const playlistPositions = new Map();
+  const playlistsBySlug = new Map();
 
   for (const post of posts) {
     if (slugs.has(post.id)) {
@@ -336,22 +379,27 @@ export function validateBlogPosts(posts) {
     }
     slugs.set(post.id, post.fileName);
 
-    if (post.series) {
-      const existingSeries = seriesNamesBySlug.get(post.seriesSlug);
-      if (existingSeries && existingSeries.name !== post.series) {
+    if (post.playlist) {
+      const existingPlaylist = playlistsBySlug.get(post.playlistSlug);
+      if (existingPlaylist && existingPlaylist.name !== post.playlist) {
         throw new Error(
-          `Series names "${existingSeries.name}" and "${post.series}" resolve to the same slug "${post.seriesSlug}" in ${existingSeries.fileName} and ${post.fileName}`
+          `Playlist names "${existingPlaylist.name}" and "${post.playlist}" resolve to the same slug "${post.playlistSlug}" in ${existingPlaylist.fileName} and ${post.fileName}`
         );
       }
-      seriesNamesBySlug.set(post.seriesSlug, { name: post.series, fileName: post.fileName });
+      if (existingPlaylist && existingPlaylist.platform !== post.platform) {
+        throw new Error(
+          `Playlist "${post.playlist}" mixes platforms ${existingPlaylist.platform} and ${post.platform}`
+        );
+      }
+      playlistsBySlug.set(post.playlistSlug, { name: post.playlist, platform: post.platform, fileName: post.fileName });
 
-      const positionKey = `${post.seriesSlug}::${post.seriesOrder}`;
-      if (seriesPositions.has(positionKey)) {
+      const positionKey = `${post.playlistSlug}::${post.playlistOrder}`;
+      if (playlistPositions.has(positionKey)) {
         throw new Error(
-          `Duplicate series position ${post.series} #${post.seriesOrder} in ${seriesPositions.get(positionKey)} and ${post.fileName}`
+          `Duplicate playlist position ${post.playlist} #${post.playlistOrder} in ${playlistPositions.get(positionKey)} and ${post.fileName}`
         );
       }
-      seriesPositions.set(positionKey, post.fileName);
+      playlistPositions.set(positionKey, post.fileName);
     }
   }
 

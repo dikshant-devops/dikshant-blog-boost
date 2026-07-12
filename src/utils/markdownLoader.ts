@@ -22,6 +22,9 @@ function stripFrontmatter(content: string): string {
 
 function normalizeIndexedPost(post: Partial<BlogPost> & { slug?: string; fileName?: string }): BlogPost {
   const id = post.id || post.slug || '';
+  const playlist = post.playlist || post.series || '';
+  const playlistSlug = post.playlistSlug || post.seriesSlug || '';
+  const playlistOrder = post.playlistOrder ?? post.seriesOrder;
   return {
     id,
     slug: post.slug || id,
@@ -32,14 +35,15 @@ function normalizeIndexedPost(post: Partial<BlogPost> & { slug?: string; fileNam
     updatedDate: post.updatedDate,
     readTime: post.readTime || '1 min read',
     wordCount: post.wordCount,
-    author: post.author || 'Dikshant Sharma',
+    author: post.author || 'Dikshant Rai',
     tags: Array.isArray(post.tags) ? post.tags : ['DevOps'],
     category: post.category || 'DevOps',
     platform: post.platform || '',
     tools: Array.isArray(post.tools) ? post.tools : [],
-    series: post.series || '',
-    seriesSlug: post.seriesSlug || '',
-    seriesOrder: post.seriesOrder,
+    playlist,
+    playlistSlug,
+    playlistOrder,
+    playlistOnly: Boolean(post.playlistOnly),
     difficulty: post.difficulty || 'Beginner',
     featured: Boolean(post.featured),
     image: post.image || '/og-default.jpg',
@@ -314,9 +318,10 @@ function parseMarkdownFile(content: string, filename: string): BlogPost | null {
       category: tags.includes('CI/CD') ? 'CI/CD' : tags.includes('Docker') || tags.includes('Kubernetes') ? 'Containers' : tags.includes('GCP') || tags.includes('AWS') || tags.includes('Azure') ? 'Cloud' : 'DevOps',
       platform: tags.find(tag => ['GCP', 'AWS', 'Azure', 'Kubernetes', 'Docker'].includes(tag)) || '',
       tools: tags.filter(tag => ['GitHub Actions', 'Jenkins', 'Docker', 'Kubernetes', 'Git', 'Cloud Armor', 'Load Balancer'].includes(tag)),
-      series: '',
+      playlist: '',
+      playlistOnly: false,
       difficulty: 'Beginner',
-      author: 'Dikshant Sharma',
+      author: 'Dikshant Rai',
       image: '/og-default.jpg',
       searchText: `${title} ${excerpt} ${markdownContent}`,
       headings: [],

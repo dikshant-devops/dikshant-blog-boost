@@ -1,5 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Mail, Users, Calendar } from "lucide-react";
+import { CheckCircle2, Mail, ShieldCheck } from "lucide-react";
+
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { useSEO } from "@/hooks/useSEO";
 
@@ -13,118 +13,48 @@ const Newsletter = () => {
   });
 
   return (
-    <>
-      <div className="container mx-auto py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Join Our <span className="text-gradient">Newsletter</span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Get the latest DevOps insights, tutorials, and industry updates delivered straight to your inbox.
-            </p>
-          </div>
+    <div className="content-shell py-12 md:py-20">
+      <div className="mx-auto max-w-5xl">
+        <header className="max-w-3xl">
+          <p className="eyebrow">Newsletter</p>
+          <h1 className="mt-3 text-4xl font-bold leading-tight md:text-6xl">The useful part of the week, in one email</h1>
+          <p className="mt-5 text-lg leading-8 text-muted-foreground">
+            New DevOps field notes, implementation lessons, and operational context. Sent when there is something worth reading.
+          </p>
+        </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            {/* Newsletter Signup */}
-            <div className="flex justify-center lg:justify-start">
-              <NewsletterSignup className="w-full max-w-2xl" />
+        <div className="mt-12 grid gap-10 border-y py-10 lg:grid-cols-[1fr_0.9fr] lg:gap-16">
+          <NewsletterSignup className="self-start" />
+
+          <section aria-labelledby="newsletter-content-heading">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-accent/15 text-accent">
+              <Mail className="h-5 w-5" />
             </div>
-
-            {/* Benefits */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">What You'll Get</h2>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5" />
+            <h2 id="newsletter-content-heading" className="mt-5 text-2xl font-semibold">What arrives</h2>
+            <div className="mt-6 space-y-5">
+              {[
+                ["New implementation guides", "A concise summary and direct path to the full article."],
+                ["Operational lessons", "The tradeoffs, failure modes, and verification steps behind the configuration."],
+                ["Tool and platform updates", "Only when they materially change how the work should be done."],
+              ].map(([title, description]) => (
+                <div key={title} className="flex gap-3">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                   <div>
-                    <h3 className="font-medium">Weekly DevOps Tips</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Practical tips and best practices for modern DevOps workflows.
-                    </p>
+                    <h3 className="font-medium">{title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{description}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">Exclusive Tutorials</h3>
-                    <p className="text-sm text-muted-foreground">
-                      In-depth tutorials and guides not available on the blog.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">Industry Updates</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Stay updated with the latest tools and technologies.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">Early Access</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Be the first to know about new content and resources.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-          </div>
+          </section>
+        </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <Card className="text-center">
-              <CardHeader>
-                <Mail className="h-8 w-8 text-primary mx-auto mb-2" />
-                <CardTitle className="text-2xl">Weekly</CardTitle>
-                <CardDescription>
-                  No spam, just valuable content delivered once a week
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <Users className="h-8 w-8 text-primary mx-auto mb-2" />
-                <CardTitle className="text-2xl">500+</CardTitle>
-                <CardDescription>
-                  DevOps professionals already subscribed
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <Calendar className="h-8 w-8 text-primary mx-auto mb-2" />
-                <CardTitle className="text-2xl">2025</CardTitle>
-                <CardDescription>
-                  Started helping developers this year
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-
-          {/* Testimonial */}
-          <Card className="bg-muted/50">
-            <CardContent className="pt-6">
-              <blockquote className="text-lg italic text-center">
-                "Tech With Dikshant's newsletter has become an essential part of my weekly reading. 
-                The DevOps insights are practical and immediately applicable to my work."
-              </blockquote>
-              <div className="text-center mt-4">
-                <p className="font-medium">— A Happy Subscriber</p>
-                <p className="text-sm text-muted-foreground">Senior DevOps Engineer</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mt-8 flex items-start gap-3 text-sm text-muted-foreground">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <p>Your address is used only for this newsletter. Every email includes an unsubscribe option.</p>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

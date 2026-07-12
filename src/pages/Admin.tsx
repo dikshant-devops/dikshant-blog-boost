@@ -17,9 +17,10 @@ const Admin = () => {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("DevOps");
   const [platform, setPlatform] = useState("");
-  const [includeInSeries, setIncludeInSeries] = useState(false);
-  const [series, setSeries] = useState("");
-  const [seriesOrder, setSeriesOrder] = useState("");
+  const [includeInPlaylist, setIncludeInPlaylist] = useState(false);
+  const [playlist, setPlaylist] = useState("");
+  const [playlistOrder, setPlaylistOrder] = useState("");
+  const [playlistOnly, setPlaylistOnly] = useState(false);
   const [difficulty, setDifficulty] = useState("Beginner");
   const [publishDate, setPublishDate] = useState(new Date().toISOString().split('T')[0]);
   const [image, setImage] = useState("/og-default.jpg");
@@ -27,7 +28,7 @@ const Admin = () => {
   const [currentTool, setCurrentTool] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState("");
-  const [author, setAuthor] = useState("Dikshant Sharma");
+  const [author, setAuthor] = useState("Dikshant Rai");
   const [readTime, setReadTime] = useState("5");
   const { toast } = useToast();
 
@@ -65,8 +66,8 @@ const Admin = () => {
   const yamlList = (values: string[]) => JSON.stringify(values.map(value => value.trim()).filter(Boolean));
 
   const generateMarkdownFile = () => {
-    const selectedSeries = includeInSeries ? series : "";
-    const selectedSeriesOrder = includeInSeries ? seriesOrder : "";
+    const selectedPlaylist = includeInPlaylist ? playlist : "";
+    const selectedPlaylistOrder = includeInPlaylist ? playlistOrder : "";
     const errors = validateBlogDraft({
       title,
       excerpt,
@@ -74,8 +75,10 @@ const Admin = () => {
       author,
       image,
       tags,
-      series: selectedSeries,
-      seriesOrder: selectedSeriesOrder
+      platform,
+      playlist: selectedPlaylist,
+      playlistOrder: selectedPlaylistOrder,
+      playlistOnly: includeInPlaylist && playlistOnly
     });
     if (errors.length > 0) {
       toast({
@@ -88,10 +91,11 @@ const Admin = () => {
 
     const slug = generateSlug(title);
     const date = publishDate || new Date().toISOString().split('T')[0];
-    const normalizedSeries = selectedSeries.trim();
-    const seriesFrontmatter = normalizedSeries
-      ? `series: ${yamlString(normalizedSeries)}
-seriesOrder: ${seriesOrder || 1}
+    const normalizedPlaylist = selectedPlaylist.trim();
+    const playlistFrontmatter = normalizedPlaylist
+      ? `playlist: ${yamlString(normalizedPlaylist)}
+playlistOrder: ${playlistOrder}
+${playlistOnly ? "playlistOnly: true\n" : ""}
 `
       : "";
     
@@ -103,7 +107,7 @@ updatedDate: ${yamlString(date)}
 author: ${yamlString(author)}
 category: ${yamlString(category)}
 platform: ${yamlString(platform)}
-${seriesFrontmatter}difficulty: ${yamlString(difficulty)}
+${playlistFrontmatter}difficulty: ${yamlString(difficulty)}
 image: ${yamlString(image)}
 tags: ${yamlList(tags)}
 tools: ${yamlList(tools)}
@@ -135,9 +139,10 @@ ${content}`;
     setContent("");
     setCategory("DevOps");
     setPlatform("");
-    setIncludeInSeries(false);
-    setSeries("");
-    setSeriesOrder("");
+    setIncludeInPlaylist(false);
+    setPlaylist("");
+    setPlaylistOrder("");
+    setPlaylistOnly(false);
     setDifficulty("Beginner");
     setPublishDate(new Date().toISOString().split('T')[0]);
     setImage("/og-default.jpg");
@@ -271,46 +276,56 @@ ${content}`;
             <div className="space-y-4 rounded-md border p-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="includeInSeries">Add to a series</Label>
+                  <Label htmlFor="includeInPlaylist">Add to a playlist</Label>
                   <p className="text-sm text-muted-foreground">
-                    Keep this off for a standalone article.
+                    Optional for GCP, AWS, and Kubernetes. The article remains independently searchable.
                   </p>
                 </div>
                 <Switch
-                  id="includeInSeries"
-                  checked={includeInSeries}
+                  id="includeInPlaylist"
+                  checked={includeInPlaylist}
                   onCheckedChange={(checked) => {
-                    setIncludeInSeries(checked);
-                    if (checked && !seriesOrder) setSeriesOrder("1");
+                    setIncludeInPlaylist(checked);
+                    if (checked && !playlistOrder) setPlaylistOrder("1");
                     if (!checked) {
-                      setSeries("");
-                      setSeriesOrder("");
+                      setPlaylist("");
+                      setPlaylistOrder("");
+                      setPlaylistOnly(false);
                     }
                   }}
                 />
               </div>
 
-              {includeInSeries && (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div className="md:col-span-2">
-                    <Label htmlFor="series">Series name</Label>
-                    <Input
-                      id="series"
-                      placeholder="Example: Production GCP Security"
-                      value={series}
-                      onChange={(e) => setSeries(e.target.value)}
-                    />
+              {includeInPlaylist && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="playlist">Playlist name</Label>
+                      <Input
+                        id="playlist"
+                        placeholder="Example: GCP Security Essentials"
+                        value={playlist}
+                        onChange={(e) => setPlaylist(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="playlistOrder">Position</Label>
+                      <Input
+                        id="playlistOrder"
+                        type="number"
+                        min="1"
+                        placeholder="1"
+                        value={playlistOrder}
+                        onChange={(e) => setPlaylistOrder(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="seriesOrder">Part number</Label>
-                    <Input
-                      id="seriesOrder"
-                      type="number"
-                      min="1"
-                      placeholder="1"
-                      value={seriesOrder}
-                      onChange={(e) => setSeriesOrder(e.target.value)}
-                    />
+                  <div className="flex items-center justify-between gap-4 border-t pt-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="playlistOnly">Playlist-only discovery</Label>
+                      <p className="text-sm text-muted-foreground">Hide from default article feeds while keeping the article searchable and directly accessible.</p>
+                    </div>
+                    <Switch id="playlistOnly" checked={playlistOnly} onCheckedChange={setPlaylistOnly} />
                   </div>
                 </div>
               )}

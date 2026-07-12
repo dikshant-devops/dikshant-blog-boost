@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Linkedin, Twitter, Github, Mail, MessageCircle, Calendar, ExternalLink } from "lucide-react";
+import { Linkedin, Twitter, Github, Mail, MessageCircle, ExternalLink, Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSEO } from "@/hooks/useSEO";
@@ -26,9 +26,9 @@ declare global {
 
 export default function Connect() {
   useSEO({
-    title: "Contact Dikshant Sharma | Tech With Dikshant",
-    description: "Contact Dikshant Sharma about DevOps, cloud engineering, technical collaboration, or questions about published tutorials.",
-    keywords: "contact Dikshant Sharma, DevOps collaboration, cloud engineering",
+    title: "Contact Dikshant Rai | Sr Site Reliability Engineer",
+    description: "Contact Dikshant Rai about site reliability engineering, cloud infrastructure, technical collaboration, or published tutorials.",
+    keywords: "contact Dikshant Rai, Site Reliability Engineering, SRE, DevOps collaboration, cloud infrastructure",
     type: "website",
     url: `${window.location.origin}/connect`
   });
@@ -221,29 +221,27 @@ export default function Connect() {
 
   return (
     <>
-      <div className="container mx-auto py-12 px-4 max-w-6xl">
+      <div className="content-shell max-w-6xl py-12 md:py-20">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Let's <span className="text-gradient">Connect</span>
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Have questions about DevOps? Want to collaborate? Or just want to say hi? 
-            I'd love to hear from you!
+        <div className="mb-12 max-w-3xl">
+          <p className="eyebrow">Contact</p>
+          <h1 className="mt-3 text-4xl font-bold md:text-6xl">Start a useful conversation</h1>
+          <p className="mt-5 text-lg leading-8 text-muted-foreground">
+            Ask about a published guide, discuss a DevOps problem, or propose a technical collaboration.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12">
           {/* Contact Form */}
           <div>
-            <Card>
+            <Card className="rounded-md shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageCircle className="h-5 w-5 text-primary" />
-                  Send Me a Message
+                  Send a message
                 </CardTitle>
                 <CardDescription>
-                  Fill out the form below and I'll get back to you within 24 hours.
+                  Share enough context to make the first reply useful.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -302,7 +300,7 @@ export default function Connect() {
                   {/* Debug: Show if environment variable is loaded */}
                   {import.meta.env.DEV && !import.meta.env.VITE_TURNSTILE_SITE_KEY && (
                     <div className="text-sm text-red-500 text-center">
-                      ⚠️ Turnstile site key not configured. Check your .env file.
+                      Turnstile site key is not configured. Check your .env file.
                     </div>
                   )}
 
@@ -314,16 +312,17 @@ export default function Connect() {
                   {/* Debug: Show if token is received */}
                   {import.meta.env.DEV && turnstileToken && (
                     <div className="text-xs text-green-500 text-center">
-                      ✓ Security check passed
+                      Security check passed
                     </div>
                   )}
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-primary hover:opacity-90"
+                    className="w-full"
                     disabled={isLoading}
                   >
-                    {isLoading ? "Sending..." : "Send Message"}
+                    <Send className="mr-2 h-4 w-4" />
+                    {isLoading ? "Sending..." : "Send message"}
                   </Button>
                 </form>
               </CardContent>
@@ -333,11 +332,11 @@ export default function Connect() {
           {/* Social Links & Info */}
           <div className="space-y-6">
             {/* Social Media */}
-            <Card>
+            <Card className="rounded-md shadow-none">
               <CardHeader>
-                <CardTitle>Follow Me Online</CardTitle>
+                <CardTitle>Find me elsewhere</CardTitle>
                 <CardDescription>
-                  Connect with me on social media for regular updates and quick tips.
+                  Public profiles, code, and direct email.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -347,7 +346,7 @@ export default function Connect() {
                     href={social.url}
                     target={social.name !== "Email" ? "_blank" : undefined}
                     rel={social.name !== "Email" ? "noopener noreferrer" : undefined}
-                    className="flex items-start gap-4 p-4 rounded-lg border hover:shadow-card transition-all group"
+                    className="group flex items-start gap-4 border-b py-4 transition-colors last:border-b-0 hover:text-primary"
                   >
                     <social.icon className={`h-6 w-6 ${social.color} group-hover:scale-110 transition-transform`} />
                     <div className="flex-1">
@@ -368,41 +367,17 @@ export default function Connect() {
               </CardContent>
             </Card>
 
-            {/* Response Time */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Response Time
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Email</span>
-                  <span className="text-sm font-medium">Within 24 hours</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">LinkedIn</span>
-                  <span className="text-sm font-medium">Within 48 hours</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Twitter</span>
-                  <span className="text-sm font-medium">Within 12 hours</span>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* What to Expect */}
-            <Card>
+            <Card className="rounded-md border-l-4 border-l-primary shadow-none">
               <CardHeader>
-                <CardTitle>What to Expect</CardTitle>
+                <CardTitle>For the best response</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-primary rounded-full mt-2" />
                   <div>
                     <p className="text-sm">
-                      <strong>Quick Response:</strong> I aim to respond to all messages within 24 hours.
+                      <strong>Include the environment:</strong> Platform, tooling, and relevant versions.
                     </p>
                   </div>
                 </div>
@@ -410,7 +385,7 @@ export default function Connect() {
                   <div className="w-2 h-2 bg-primary rounded-full mt-2" />
                   <div>
                     <p className="text-sm">
-                      <strong>Helpful Answers:</strong> I'll do my best to provide detailed, actionable advice.
+                      <strong>Describe observed behavior:</strong> What happened, not only what was expected.
                     </p>
                   </div>
                 </div>
@@ -418,7 +393,7 @@ export default function Connect() {
                   <div className="w-2 h-2 bg-primary rounded-full mt-2" />
                   <div>
                     <p className="text-sm">
-                      <strong>Follow-up:</strong> If needed, I'm happy to continue the conversation.
+                      <strong>Remove secrets:</strong> Never send credentials, tokens, or private customer data.
                     </p>
                   </div>
                 </div>

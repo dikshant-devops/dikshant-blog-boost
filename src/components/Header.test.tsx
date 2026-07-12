@@ -25,7 +25,7 @@ describe('Header', () => {
   it('renders desktop navigation links', () => {
     renderHeader();
     expect(screen.getAllByText('Home').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Blog').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Articles').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('About').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Connect').length).toBeGreaterThanOrEqual(1);
   });
@@ -43,10 +43,9 @@ describe('Header', () => {
 
   it('highlights active nav link for current route', () => {
     renderHeader('/blog');
-    const blogLinks = screen.getAllByText('Blog');
-    // At least one Blog link should have the active class
+    const blogLinks = screen.getAllByText('Articles');
     const hasActive = blogLinks.some(
-      (el) => el.className.includes('text-primary') && !el.className.includes('text-muted-foreground')
+      (el) => el.className.includes('bg-muted') && !el.className.includes('text-muted-foreground')
     );
     expect(hasActive).toBe(true);
   });

@@ -5,8 +5,10 @@ export type DraftValidationInput = {
   author: string;
   image: string;
   tags: string[];
-  series: string;
-  seriesOrder: string;
+  platform: string;
+  playlist: string;
+  playlistOrder: string;
+  playlistOnly: boolean;
 };
 
 const inspectMarkdownBody = (content: string) => {
@@ -41,8 +43,20 @@ export const validateBlogDraft = (draft: DraftValidationInput): string[] => {
   if (!/\.(?:jpe?g|png|webp)(?:\?.*)?$/i.test(draft.image.trim())) errors.push('Social image must be JPEG, PNG, or WebP.');
   if (body.hasH1) errors.push('Do not add an H1 in the body; the title is the page H1.');
   if (body.wordCount < 300) errors.push('Article body must contain at least 300 non-code words.');
-  if (draft.series.trim() && (!/^\d+$/.test(draft.seriesOrder || '1') || Number(draft.seriesOrder || 1) < 1)) {
-    errors.push('Series order must be a positive integer.');
+  if (!draft.playlist.trim() && draft.playlistOrder.trim()) {
+    errors.push('Playlist name is required when an order is supplied.');
+  }
+  if (draft.playlist.trim() && (!/^\d+$/.test(draft.playlistOrder) || Number(draft.playlistOrder) < 1)) {
+    errors.push('Playlist order must be a positive integer.');
+  }
+  if (draft.playlist.trim() && !['GCP', 'AWS', 'Kubernetes'].includes(draft.platform)) {
+    errors.push('Playlists are supported only for GCP, AWS, or Kubernetes posts.');
+  }
+  if (draft.playlist.trim() && !draft.tags.includes(draft.platform)) {
+    errors.push(`Playlist posts must include the ${draft.platform || 'platform'} tag.`);
+  }
+  if (draft.playlistOnly && !draft.playlist.trim()) {
+    errors.push('Playlist-only discovery requires playlist membership.');
   }
   return errors;
 };

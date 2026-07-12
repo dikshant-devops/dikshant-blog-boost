@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle, Mail } from "lucide-react";
@@ -46,7 +45,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
         setSubscriptionStep('success');
         setShowModal(true);
         toast({
-          title: "Welcome to our newsletter! 🎉",
+          title: "Welcome to the newsletter",
           description: "Check your email to confirm your subscription.",
         });
         setEmail("");
@@ -77,24 +76,22 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
   if (variant === "inline") {
     return (
       <>
-        <div className={`bg-muted/50 rounded-lg p-6 ${className}`}>
-          <h3 className="text-lg font-semibold mb-2">Subscribe to Our Newsletter</h3>
-          <p className="text-muted-foreground mb-4">
-            Get the latest DevOps tips and tutorials delivered to newsletter@techwithdikshant.com
-          </p>
-          <form onSubmit={handleSubmit} className="flex gap-2">
+        <div className={className}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
             <Input
               type="email"
-              placeholder="Enter your email"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="flex-1"
+              aria-label="Email address"
+              className="h-11 flex-1 bg-background"
             />
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Loading..." : "Subscribe"}
+            <Button type="submit" disabled={isLoading} className="h-11 px-6">
+              {isLoading ? "Subscribing..." : "Subscribe"}
             </Button>
           </form>
+          <p className="mt-3 text-xs text-muted-foreground">No spam. Unsubscribe at any time.</p>
         </div>
 
         <Dialog open={showModal} onOpenChange={setShowModal}>
@@ -115,7 +112,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
                     Please check your email to confirm your subscription.
                   </p>
                   <Button onClick={closeModal} className="w-full">
-                    Return to Home Page
+                    Close
                   </Button>
                 </div>
               </>
@@ -128,14 +125,16 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
 
   return (
     <>
-      <Card className={`shadow-card ${className}`}>
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Stay Updated</CardTitle>
-          <CardDescription>
-            Get the latest DevOps insights and tutorials delivered from newsletter@techwithdikshant.com
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className={`rounded-md border bg-card p-6 md:p-8 ${className}`}>
+        <div className="mb-6">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Mail className="h-5 w-5" />
+          </div>
+          <h2 className="text-2xl font-semibold">Get new field notes</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Practical DevOps and cloud engineering articles, sent when something useful is published.
+          </p>
+        </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               type="email"
@@ -146,14 +145,14 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
             />
             <Button
               type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90"
+              className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Loading..." : "Subscribe to Newsletter"}
+              {isLoading ? "Subscribing..." : "Subscribe to Newsletter"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        <p className="mt-3 text-center text-xs text-muted-foreground">No spam. Unsubscribe at any time.</p>
+      </div>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-[500px]">
@@ -173,7 +172,7 @@ export const NewsletterSignup = ({ className = "", variant = "default" }: Newsle
                   Please check your email to confirm your subscription.
                 </p>
                 <Button onClick={closeModal} className="w-full">
-                  Return to Home Page
+                  Close
                 </Button>
               </div>
             </>

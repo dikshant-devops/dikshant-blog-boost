@@ -51,21 +51,21 @@ export function buildSitemap(posts) {
     lastmod: post.updatedDate || post.date,
     priority: '0.9'
   }));
-  const seriesBySlug = new Map();
+  const playlistsBySlug = new Map();
   for (const post of posts) {
-    if (!post.series || !post.seriesSlug) continue;
-    const existing = seriesBySlug.get(post.seriesSlug);
+    if (!post.playlist || !post.playlistSlug) continue;
+    const existing = playlistsBySlug.get(post.playlistSlug);
     const lastmod = post.updatedDate || post.date;
     if (!existing || lastmod > existing.lastmod) {
-      seriesBySlug.set(post.seriesSlug, {
-        loc: `${siteUrl}/series/${post.seriesSlug}`,
+      playlistsBySlug.set(post.playlistSlug, {
+        loc: `${siteUrl}/playlists/${post.playlistSlug}`,
         lastmod,
         priority: '0.7'
       });
     }
   }
 
-  const urls = [...staticUrls, ...seriesBySlug.values(), ...postUrls]
+  const urls = [...staticUrls, ...playlistsBySlug.values(), ...postUrls]
     .map(item => [
       '  <url>',
       `    <loc>${xmlEscape(item.loc)}</loc>`,
@@ -81,6 +81,7 @@ export function buildSitemap(posts) {
 function buildRss(posts) {
   const siteUrl = SITE_URL.replace(/\/$/, '');
   const items = posts
+    .filter(post => !post.playlistOnly)
     .slice(0, 25)
     .map(post => [
       '    <item>',

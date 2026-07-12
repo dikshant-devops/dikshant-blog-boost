@@ -32,8 +32,7 @@ describe('BlogCard', () => {
 
   it('should display formatted date', () => {
     renderWithRouter(<BlogCard post={mockPost} />);
-    // The date should be formatted as "January 15, 2024"
-    expect(screen.getByText(/January 15, 2024/)).toBeInTheDocument();
+    expect(screen.getByText(/Jan 15, 2024/)).toBeInTheDocument();
   });
 
   it('should display read time', () => {
@@ -41,11 +40,11 @@ describe('BlogCard', () => {
     expect(screen.getByText('5 min read')).toBeInTheDocument();
   });
 
-  it('should render all tags', () => {
+  it('limits secondary tags to keep cards scannable', () => {
     renderWithRouter(<BlogCard post={mockPost} />);
     expect(screen.getByText('Docker')).toBeInTheDocument();
     expect(screen.getByText('DevOps')).toBeInTheDocument();
-    expect(screen.getByText('Kubernetes')).toBeInTheDocument();
+    expect(screen.queryByText('Kubernetes')).not.toBeInTheDocument();
   });
 
   it('should have correct link to blog post', () => {
@@ -78,13 +77,14 @@ describe('BlogCard', () => {
     expect(screen.getByText('Docker')).toBeInTheDocument();
   });
 
-  it('should handle posts with many tags', () => {
+  it('should keep posts with many tags visually bounded', () => {
     const manyTagsPost: BlogPost = {
       ...mockPost,
       tags: ['Docker', 'Kubernetes', 'CI/CD', 'DevOps', 'Cloud']
     };
     renderWithRouter(<BlogCard post={manyTagsPost} />);
-    expect(screen.getByText('Cloud')).toBeInTheDocument();
+    expect(screen.queryByText('Cloud')).not.toBeInTheDocument();
+    expect(screen.getByText('Docker')).toBeInTheDocument();
   });
 
   it('does not repeat category or platform labels as tags', () => {
@@ -101,6 +101,19 @@ describe('BlogCard', () => {
     expect(screen.getByText('DevOps')).toBeInTheDocument();
   });
 
+  it('shows optional playlist membership without changing the article link', () => {
+    const playlistPost: BlogPost = {
+      ...mockPost,
+      playlist: 'Kubernetes Foundations',
+      playlistSlug: 'kubernetes-foundations',
+      playlistOrder: 2,
+    };
+    renderWithRouter(<BlogCard post={playlistPost} />);
+
+    expect(screen.getByText('Kubernetes Foundations · Item 2')).toBeInTheDocument();
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/blog/test-post');
+  });
+
   it('should memoize date formatting (component optimization)', () => {
     const { rerender } = renderWithRouter(<BlogCard post={mockPost} />);
 
@@ -108,6 +121,6 @@ describe('BlogCard', () => {
     rerender(<BrowserRouter><BlogCard post={mockPost} /></BrowserRouter>);
 
     // Date should still be displayed correctly
-    expect(screen.getByText(/January 15, 2024/)).toBeInTheDocument();
+    expect(screen.getByText(/Jan 15, 2024/)).toBeInTheDocument();
   });
 });

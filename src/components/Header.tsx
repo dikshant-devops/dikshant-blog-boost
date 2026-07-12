@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Menu } from "lucide-react";
+import { Moon, Sun, Menu, TerminalSquare } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   Sheet,
@@ -13,7 +13,7 @@ import {
 
 const navLinks = [
   { to: "/", label: "Home", exact: true },
-  { to: "/blog", label: "Blog", exact: false },
+  { to: "/blog", label: "Articles", exact: false },
   { to: "/about", label: "About", exact: true },
   { to: "/connect", label: "Connect", exact: true },
 ];
@@ -34,22 +34,26 @@ export const Header = () => {
       : location.pathname.startsWith(link.to);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="text-2xl font-bold text-gradient">
-            Tech With Dikshant
+    <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur-xl">
+      <div className="content-shell flex h-16 items-center justify-between">
+        <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="Tech With Dikshant home">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-foreground text-background">
+            <TerminalSquare className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-sm font-bold md:text-base">Tech With Dikshant</div>
+            <div className="hidden text-[11px] text-muted-foreground sm:block">DevOps field notes</div>
           </div>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center space-x-6">
+        <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                isActive(link) ? "text-primary" : "text-muted-foreground"
+              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground ${
+                isActive(link) ? "bg-muted text-foreground" : "text-muted-foreground"
               }`}
             >
               {link.label}
@@ -57,19 +61,20 @@ export const Header = () => {
           ))}
         </nav>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={toggleTheme}
             className="h-9 w-9 p-0"
+            title="Toggle color theme"
           >
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
-          <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
-            <Link to="/newsletter">Subscribe</Link>
+          <Button size="sm" asChild className="hidden sm:inline-flex">
+            <Link to="/newsletter">Get field notes</Link>
           </Button>
 
           {/* Mobile hamburger */}
@@ -86,7 +91,7 @@ export const Header = () => {
             </SheetTrigger>
             <SheetContent side="right">
               <SheetHeader>
-                <SheetTitle className="text-gradient">Menu</SheetTitle>
+                <SheetTitle>Tech With Dikshant</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col space-y-4 mt-6">
                 {navLinks.map((link) => (
