@@ -169,7 +169,10 @@ const Index = () => {
         {loading ? (
           <div className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
             <BlogCardSkeleton />
-            <div><BlogCardSkeleton /><BlogCardSkeleton /></div>
+            <div className="grid gap-6">
+              <BlogCardSkeleton className="h-auto" />
+              <BlogCardSkeleton className="h-auto" />
+            </div>
           </div>
         ) : (
           <div className="grid gap-8 lg:grid-cols-[1.35fr_0.9fr] lg:gap-10">

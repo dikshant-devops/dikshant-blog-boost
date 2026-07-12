@@ -64,6 +64,8 @@ describe('Index Page', () => {
 
     const skeletons = document.querySelectorAll('.animate-pulse');
     expect(skeletons.length).toBeGreaterThan(0);
+    const latest = screen.getByRole('region', { name: 'Latest field notes' });
+    expect(latest.querySelectorAll('.h-auto')).toHaveLength(2);
   });
 
   it('displays only 3 featured posts (not all 4)', async () => {
