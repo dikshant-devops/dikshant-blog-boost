@@ -2,6 +2,7 @@
   "aws-iam-fundamentals.md",
   "checkov.md",
   "Cloud_Armor.md",
+  "configure-ssh-tunnel-securely.md",
   "gcp-iam-fundamentals.md",
   "gcp-iap-nginx-load-balancer.md",
   "gcp-tls-13-load-balancer.md",
