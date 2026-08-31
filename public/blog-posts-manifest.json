@@ -15,5 +15,6 @@
   "Host-Based vs Path-Based Routing.md",
   "iperf-blog.md",
   "kubernetes-deployments-introduction.md",
-  "kubernetes-introduction.md"
+  "kubernetes-introduction.md",
+  "secure-web-proxy.md"
 ]
