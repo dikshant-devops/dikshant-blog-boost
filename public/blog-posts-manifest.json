@@ -7,6 +7,7 @@
   "getting-started-with-docker.md",
   "git-commands-visual-guide.md",
   "github-actions-cicd.md",
+  "github-actions-matrix-deployments.md",
   "Host-Based vs Path-Based Routing.md",
   "iperf-blog.md",
   "kubernetes-deployments-introduction.md",
