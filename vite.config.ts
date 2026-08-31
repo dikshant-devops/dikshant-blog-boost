@@ -21,6 +21,18 @@ export default defineConfig(() => ({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('/node_modules/react-router')) return 'react-router';
+          if (
+            id.includes('/node_modules/react/')
+            || id.includes('/node_modules/react-dom/')
+            || id.includes('/node_modules/scheduler/')
+          ) return 'react-runtime';
+        },
+      },
+    },
   }
 }));
