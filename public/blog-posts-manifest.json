@@ -1,5 +1,6 @@
 [
   "aws-iam-fundamentals.md",
+  "checkov.md",
   "Cloud_Armor.md",
   "gcp-iam-fundamentals.md",
   "gcp-tls-13-load-balancer.md",
