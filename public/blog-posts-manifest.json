@@ -3,6 +3,7 @@
   "checkov.md",
   "Cloud_Armor.md",
   "gcp-iam-fundamentals.md",
+  "gcp-iap-nginx-load-balancer.md",
   "gcp-tls-13-load-balancer.md",
   "getting-started-with-docker.md",
   "git-commands-visual-guide.md",
